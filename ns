@@ -1,0 +1,4 @@
+#!/bin/sh
+# note studio CLI（相対パスの引数が効くよう、作業ディレクトリは変えずにPYTHONPATHだけ通す）
+DIR=$(cd "$(dirname "$0")" && pwd)
+PYTHONPATH="$DIR${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m notestudio "$@"

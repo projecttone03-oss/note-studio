@@ -1,0 +1,327 @@
+{
+  "genre": "AIツール・アプリ・Webサービス",
+  "brief": "担当ジャンルは『AIツール・アプリ・Webサービスの使い方』。./ns context で既出6テーマ（タイミー還付申告・相続・高額療養費・相続登記・年収の壁・インボイス）と判断ログ（『学生にとって有益』という理由でタイミー還付申告が採用）を確認し、(1)学生・若者にも役立つ、(2)note歴ゼロでもGoogle検索のロングテールから流入が見込める、(3)仕様変更・新サービス直後で既存の解説が古くなっている、の3点を重視した。系統は『新しいツール・サービス／仕様変更』（マイナアプリ刷新、Google AI Plus学生特典、teppay、Gmail POP終了、Windows 10 ESU、Gemini Spark等）、『繰り返される質問』（知恵袋・Googleコミュニティ・公式FAQ）、『既存の有料商品』（site:note.com で有料記事の有無と鮮度を確認）の3系統を主軸にした。ChatGPT・NotebookLM・Claude Code（非エンジニア向け）など無料解説や書籍が飽和しているものは gap を厳しく見て候補から外し、AIツールの料金比較もBusiness Insider等が毎月無料で早見表を出しているため外した。ツール系は寿命が短いので longevity は辛めに付けた。他担当との重複を避けるため、学生の『お金と手続き』（還付・奨学金等）、仕事・副業・資格、暮らし（引越し・カード更新手続きそのもの）、趣味に入る切り口は除外し、あくまで『アプリ・サービスの操作手順と使い分け』に絞った。",
+  "method": "WebSearch 35回（上限内）。見たサイトの種類: 官公庁・公的機関（デジタル庁、マイナポータルFAQ、国税庁、文部科学省、大学の情報センター）、ニュース（Impress Watch、ITmedia、Business Insider Japan、東洋経済は検索結果の要約のみ）、企業・個人ブログ（検索結果のみ）、Q&A（Yahoo!知恵袋・Googleアカウントコミュニティは検索結果のタイトルのみで本文は未読）、note記事（site:note.com の一般Web検索のみ）。WebFetch: note個別記事は合計5ページ（Gemini学生特典解説〈さわやか〉、2000字レポートテンプレ〈AI大学生〉、Android機種変更チェックリスト〈u10〉、論文・課題レポート作成AI講座〈Sharaku Satoh〉、学校Googleアカウント移行〈Daigo Sakane〉）で上限内。その他の WebFetch: Google公式ブログ（学生向けGemini特典、2026-08-20）、teppay公式サイト、Impress Watch（マイナアプリ公開記事、2026-08-25）、Business Insider Japan（2026年9月版 生成AI料金早見表）、デジタル庁『2026年秋頃に「Androidのマイナンバーカード」へ刷新します』（本文が取得できずタイトルのみ確認）。note.com の /search・/api、X には一切アクセスしていない（検索結果にXのURLが出たが開いていない）。確認できなかったこと: (1) 有料の競合記事・商品は5テーマとも価格を確認できたものがゼロ（開いたnote5本はすべて無料。『AI大学生』の別売教材、itot氏の書籍は価格未確認）。(2) 検索ボリュームの実数（キーワードツールは未使用）。(3) マイナアプリの利用者数・マイナポータル連携の年末調整利用率（公式数値を見つけられず、代わりにスマホのマイナンバーカード保有枚数を使用）。(4) iPhone 18 の発売日はリーク・予想サイトの情報のみで、Apple公式発表は未確認（発表はちょうど今日の予定）。(5) 大学の卒業者数は未確認（学部在学者数のみ）。(6) 知恵袋・Googleコミュニティの投稿は件数・日付を本文で確認していない。(7) 『Androidのマイナンバーカード』刷新の具体的な日付・再登録の要否は本文が読めず未確認。",
+  "queries": [
+    "2026年9月 生成AI 新機能 日本語 提供開始 アップデート",
+    "Windows 10 ESU 2026年10月 終了 どうする 個人",
+    "teppay モバイルSuica 2026 開始 使い方",
+    "teppay サービス開始日 JR東日本 発表 2026年",
+    "Gemini 学生 無料 2026 Google AI Pro 大学生 特典",
+    "大学 生成AI 利用ガイドライン レポート 2026年度 学生 使っていい",
+    "site:note.com Google AI Plus 学生 無料",
+    "マイナポータル 2026年 リニューアル 新機能 アプリ 変更点",
+    "年末調整 マイナポータル連携 やり方 わからない 2026",
+    "マイナンバーカード 2026年 更新 大量 電子証明書 スマホ 期限切れ 手続き",
+    "マイナアプリ 使えない ログインできない 知恵袋 アップデート後",
+    "site:note.com マイナアプリ 使い方",
+    "NotebookLM 2026 アップデート 大学生 勉強 使い方 学習ノートブック",
+    "teppay 開始日 決定 モバイルSuica アップデート 9月 10月",
+    "iPhone マイナ保険証 スマホ 病院 使い方 2026 対応医療機関",
+    "site:note.com 大学生 レポート 生成AI 書き方 有料",
+    "大学 卒業 Googleアカウント 削除 データ移行 やり方 Microsoft 365 使えなくなる",
+    "Gemini Spark エージェント 使い方 日本語 提供開始",
+    "site:note.com Claude Code 非エンジニア 入門 有料 2026",
+    "Gmail 他のアカウントのメール POP 受信 終了 2026 代わり 方法",
+    "新しいOutlook 強制移行 2026 個人 プロバイダメール 設定 できない",
+    "機種変更 iPhone マイナンバーカード スマホ用電子証明書 引き継ぎ 手順 失効",
+    "機種変更 引き継ぎ 失敗 アプリ 認証アプリ ログインできない 知恵袋 2026",
+    "機種変更 データ移行 トラブル 調査 割合 MMD研究所 2026",
+    "site:note.com 機種変更 チェックリスト 引き継ぎ アプリ",
+    "マイナンバーカード 保有枚数 2026年 総務省 スマホ用電子証明書 iPhone 登録件数",
+    "学校基本調査 令和7年度 速報 大学 学生数 過去最多",
+    "ChatGPT 学生 無料 日本 2026 学割 Claude 学生 プラン",
+    "iPhone 18 発売日 日本 2026年9月 予約開始",
+    "大学 卒業 大学のGoogleアカウント 使えなくなる データ 知恵袋 移行",
+    "大学生 講義 録音 AI 文字起こし 要約 NotebookLM 許可 ルール",
+    "site:note.com 卒業 大学 アカウント データ移行 Google Takeout",
+    "site:note.com マイナポータル スマホ 年末調整 e-Tax 連携 手順",
+    "Google AI Plus 学生 認証 できない SheerID 知恵袋 2026",
+    "機種変更 データ移行 失敗 経験 割合 調査 2025 LINE 銀行アプリ"
+  ],
+  "candidates": [
+    {
+      "title": "新『マイナアプリ』（2026年8月25日刷新）の実用ガイド：初回登録・スマホのマイナンバーカード・年末調整/確定申告のマイナポータル連携・ログインできないときの対処",
+      "summary": "マイナポータルアプリとデジタル認証アプリが統合された『マイナアプリ』について、初回登録、iPhone/Androidのスマホのマイナンバーカードの使い分け、年末調整・確定申告でのマイナポータル連携、民間サービスの本人確認、ログインできないときの対処を1本に整理する。",
+      "target_reader": "マイナンバーカードを持ち、スマホで行政手続きや本人確認をしたい会社員・学生・一般の人。とくに8月末のアップデート後にログインできなくなった人、10〜11月の年末調整でマイナポータル連携を求められる会社員。",
+      "reader_pain": "アプリ名・画面・手順が変わり、ネット上の解説（旧マイナポータルアプリ前提）と画面が一致しない。アップデート後にログインできない、年末調整で控除証明書を取り込む手順がわからない、iPhoneとAndroidで手順が違う、という混乱が起きている。年末調整の提出期限（勤務先指定の10〜11月）が迫る。",
+      "keywords": [
+        "マイナアプリ 使い方",
+        "マイナアプリ ログインできない",
+        "マイナアプリ マイナポータルアプリ 違い",
+        "年末調整 マイナポータル連携 やり方 2026",
+        "iPhoneのマイナンバーカード マイナアプリ"
+      ],
+      "channels": ["Google検索", "note内の回遊"],
+      "demand_evidence": [
+        {
+          "claim": "2026年8月25日にマイナポータルアプリとデジタル認証アプリを統合した『マイナアプリ』が公開。iPhoneのマイナンバーカード／Androidスマホ用電子証明書に対応し、初回はカードでの登録とスマホの画面ロック設定が必須。対応サービスは6月時点で300以上（e-Tax、メルカリ、三菱UFJ銀行など）。",
+          "source": {"url": "https://www.watch.impress.co.jp/docs/news/2135167.html", "title": "新「マイナアプリ」公開 マイナポータル+スマホだけで本人確認", "publisher": "Impress Watch", "type": "news", "published": "2026-08"},
+          "confidence": "high"
+        },
+        {
+          "claim": "Yahoo!知恵袋に『マイナポータルアプリが新しくなってからログイン出来なくなりました』『マイナアプリをアップデートしたらマイナポータルに入れなくなりました』という質問が出ている（検索結果のタイトルで確認。件数・本文は未確認）。マイナポータル公式FAQにも『マイナポータルアプリ・マイナアプリを利用したログインができません』の項目がある。",
+          "source": {"url": "https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q13330863068", "title": "マイナアプリをアップデートしたらマイナポータルに入れなくなりました - Yahoo!知恵袋", "publisher": "Yahoo!知恵袋", "type": "qa", "published": "2026"},
+          "confidence": "medium"
+        },
+        {
+          "claim": "iPhoneのマイナンバーカード保有枚数が2026年1月21日時点で500万枚を突破（2025年6月開始）。スマホでマイナンバーカードを使う層がすでに数百万人規模いる。",
+          "source": {"url": "https://k-tai.watch.impress.co.jp/docs/news/2080324.html", "title": "「iPhoneのマイナンバーカード」保有枚数が500万枚突破", "publisher": "ケータイ Watch", "type": "news", "published": "2026-01"},
+          "confidence": "medium"
+        },
+        {
+          "claim": "マイナンバーカードの保有枚数率は2026年1月末時点で81.2%（検索結果のタイトルで確認）。",
+          "source": {"url": "https://www.bcnretail.com/market/detail/20260210_596529.html", "title": "26年1月末時点のマイナンバーカード保有枚数率は81.2％ 東京や神奈川は平均を下回る", "publisher": "BCN＋R", "type": "news", "published": "2026-02"},
+          "confidence": "medium"
+        },
+        {
+          "claim": "国税庁は年末調整・確定申告のマイナポータル連携の特設ページと年末調整のよくある質問を公開しており、控除証明書の取得・自動入力にマイナポータルを使う手続きが制度として定着している。",
+          "source": {"url": "https://www.nta.go.jp/taxes/tetsuzuki/mynumberinfo/mynapo.htm", "title": "マイナポータル連携特設ページ", "publisher": "国税庁", "type": "official", "published": "2026"},
+          "confidence": "medium"
+        },
+        {
+          "claim": "デジタル庁が『2026年秋頃に「Androidのマイナンバーカード」へ刷新します』と告知しており、Android側の仕様が年内にもう一度変わる見込み（ページ本文は取得できずタイトルのみ確認）。",
+          "source": {"url": "https://services.digital.go.jp/mynumbercard-android/news/0cfe138d7fb5927e4dc6d/", "title": "2026年秋頃に「Androidのマイナンバーカード」へ刷新します", "publisher": "デジタル庁", "type": "official", "published": "2026"},
+          "confidence": "medium"
+        }
+      ],
+      "competitors": [
+        {"title": "【2026年8月最新】マイナアプリでログインできない原因と対処法｜症状別に解説", "url": "https://hintobako.hatenablog.com/entry/2026/08/27/235511", "platform": "blog", "price": null, "paid": false, "price_verified": false, "quality_note": "検索結果のみ確認。ログイン不具合に特化した無料ブログ。年末調整・確定申告連携までは扱っていないと推定（未読）。"},
+        {"title": "【e-tax】マイナポータルとの連携！（下）作業の手順｜若利真下", "url": "https://note.com/fujita1339/n/n9fbe830c290b", "platform": "note", "price": null, "paid": false, "price_verified": false, "quality_note": "検索結果のみ確認。e-Tax確定申告向けで、マイナアプリ刷新前の旧アプリ前提の手順。"},
+        {"title": "【マイナアプリ】何が変わった？マイナポータルアプリとの違いと設定手順2026", "url": "https://minnano-rakuraku.com/contents/mynaapp-25565/", "platform": "blog", "price": null, "paid": false, "price_verified": false, "quality_note": "検索結果のみ確認。変更点の概要中心の無料記事。"}
+      ],
+      "price_range": {"min": null, "max": null, "note": "site:note.com で『マイナアプリ』の記事自体が見つからず、有料の競合は0件（価格確認済み0件）。マイナポータル連携のnote記事はe-Tax向け・無料・刷新前のもののみ。"},
+      "gap": "site:note.com 検索で『マイナアプリ 使い方』に該当するnote記事は見つからず、見つかったマイナポータル関連のnoteは確定申告（e-Tax）向けで8月25日の刷新前の画面・アプリ名のまま。刷新後の無料解説はブログに数本出始めているが、ログイン不具合か変更点の概要だけで、『年末調整での連携』『iPhone/Androidの差』『機種変更時』まで通した手順は見当たらない。公式FAQ・マニュアルは項目ごとに分かれていて、自分の状況で何をすればいいか一本で追えない。ただし公式ヘルプが一定程度そろっているため、gapは中程度とした。",
+      "differentiation_hint": "iPhone/Android 別の分岐フローチャート、エラー表示ごとの対処表、『年末調整の依頼が来たら』の時系列チェックリスト、実機スクショ（刷新後の画面）で差別化。Android刷新（秋）後に追記・改訂する前提で『更新履歴』を見せる。",
+      "primary_info_needed": "自分のスマホで刷新後のマイナアプリ初回登録〜マイナポータル連携（控除証明書の取得）までを実際に操作したスクショ。可能ならiPhoneとAndroidの両方。勤務先の年末調整ソフト側の取り込み画面（一般的な例）。",
+      "risks": [
+        "鮮度: Androidの刷新（2026年秋頃予定）や画面の変更で手順が古くなる。改訂を前提にする必要がある。",
+        "既出テーマ『タイミー還付申告』と確定申告部分が重なりうるので、申告書の作成手順には踏み込まずアプリ操作に絞る。",
+        "マイナンバー・暗証番号・証明書の画面をスクショで載せる際の個人情報の写り込みに注意。",
+        "カードや電子証明書の更新（窓口手続き）そのものは『暮らし』担当と重なりうるので扱わない。"
+      ],
+      "scores": {"demand": 5, "gap": 3, "willingness_to_pay": 3, "feasibility": 4, "longevity": 3},
+      "score_rationale": "demand 5: マイナンバーカード保有率81.2%、iPhoneのマイナンバーカードだけで500万枚超と対象者が数百万〜数千万人規模で、刷新直後に知恵袋でログイン不能の質問が出ている。gap 3: 有料記事はゼロで、noteの既存解説は刷新前だが、公式FAQ・マニュアルがある程度そろっており無料ブログも出始めているので中程度。willingness_to_pay 3: 年末調整の期限前に時間と手戻りを節約できるが、公式ヘルプで我慢できる人も多い。feasibility 4: 公開情報と自分の実機操作で書けるが、iPhone/Android両方のスクショ準備に手間がかかる。longevity 3: 年末調整（10〜11月）〜確定申告（2027年2〜3月）まで売れる見込みだが、Android刷新などで改訂が必要。"
+    },
+    {
+      "title": "大学生向け『Google AI Plus 1年無料』（申込期限2026年12月31日）の申込・学生認証・自動課金を止める手順と、学生向け新機能（学習ノートブック・学生ハブ等）の使い方",
+      "summary": "2026年8月発表のGemini学生特典（日本はGoogle AI Plusが12か月無料、AI Proは割引）について、対象条件、SheerIDでの学生認証、無料期間後の月額725円への自動移行を止める手順、Plus/Pro割引のどちらを選ぶかと学生向け新機能の使い方を整理する。",
+      "target_reader": "日本の大学・大学院・高専などに在籍する18歳以上の学生で、Geminiの有料機能を無料で使いたいが、条件や過去のキャンペーン情報（AI Pro無料）と混同して迷っている人。",
+      "reader_pain": "昨年度の『AI Pro 1年無料』の記事や『学生特典は終了済み』という記事が検索上位に残り、今回日本で対象になるのがAI Plusなのか、学校のアカウントで申し込めるのか、支払い方法の登録が必要なのか、1年後に自動で課金されるのかがわからない。締切（12月31日）がある。",
+      "keywords": [
+        "Google AI Plus 学生 無料",
+        "Gemini 学生 無料 2026 申し込み",
+        "Google AI Plus 学生 解約",
+        "Gemini 学生 認証 SheerID できない"
+      ],
+      "channels": ["Google検索", "X", "note内の回遊"],
+      "demand_evidence": [
+        {
+          "claim": "Google公式ブログ（2026年8月20日）: 対象国の大学生はGoogle AI Plusを1年間無料で利用可能。SheerIDで学生認証、学校発行のGoogleアカウントは不可（個人アカウントのみ）、申込期限は2026年12月31日、無料期間後は月額725円。Google AI Proは最大75%割引。学生ハブ・学習ノートブック等の新機能も発表。",
+          "source": {"url": "https://blog.google/intl/ja-jp/company-news/technology/gemini-student-offer-google-ai/", "title": "新学期を 1 年間の Gemini プランとともにスタートしましょう", "publisher": "Google", "type": "official", "published": "2026-08"},
+          "confidence": "high"
+        },
+        {
+          "claim": "対象となりうる大学学部の在学者は約264.6万人、大学院は約27.7万人（令和7年5月1日現在、いずれも過去最多）。",
+          "source": {"url": "https://www.mext.go.jp/b_menu/toukei/chousa01/kihon/kekka/k_detail/2025.htm", "title": "学校基本調査－令和7年度 結果の概要－", "publisher": "文部科学省", "type": "official", "published": "2025-12"},
+          "confidence": "medium"
+        },
+        {
+          "claim": "ITmediaが『Google、大学生向けに「Google AI Plus」を1年間無料提供』と報道しており、話題性がある。",
+          "source": {"url": "https://www.itmedia.co.jp/news/article/2608/20/2000000634/", "title": "Google、大学生向けに「Google AI Plus」を1年間無料提供 「Gemini」アプリに学生向け新機能も", "publisher": "ITmedia NEWS", "type": "news", "published": "2026-08"},
+          "confidence": "medium"
+        },
+        {
+          "claim": "2026年3月公開のnote記事は前回キャンペーン（Google AI Pro 1年無料・2TB）を前提に解説しており、今回の日本向け内容（AI Plus・400GB）とは異なる古い情報が流通している。",
+          "source": {"url": "https://note.com/aikatsuyoujyutsu/n/n29dc1111f6dd", "title": "【学生必見】Gemini学生無料1年特典の始め方と神活用術を完全解説", "publisher": "さわやか（note）", "type": "note", "published": "2026-03"},
+          "confidence": "high"
+        }
+      ],
+      "competitors": [
+        {"title": "【学生必見】Gemini学生無料1年特典の始め方と神活用術を完全解説", "url": "https://note.com/aikatsuyoujyutsu/n/n29dc1111f6dd", "platform": "note", "price": null, "paid": false, "price_verified": true, "quality_note": "開いて無料と確認。2026-03公開で前回のAI Pro無料キャンペーン前提、今回の内容とは不一致。"},
+        {"title": "大学生必見！学生生活で便利な Gemini 活用術 10 選", "url": "https://note.com/google_gemini/n/ncfe2467bdfbc", "platform": "note", "price": null, "paid": false, "price_verified": false, "quality_note": "Google公式のnoteアカウント（検索結果のみ確認）。公式が無料で活用法を発信している。"},
+        {"title": "【大学生は今すぐチェック！！】Google AI Plusが一年間無料で使えます！！", "url": "https://note.com/kaito_gemini/n/nb1be9607b4eb", "platform": "note", "price": null, "paid": false, "price_verified": false, "quality_note": "Google AI学生アンバサダーの記事（検索結果のみ確認）。今回の特典に対応済みと思われる。"},
+        {"title": "Google AI Plusが大学生1年間無料｜対象条件・申し込み方法・Gemini学生向け新機能・解約手順を解説", "url": "https://ai-revolution.co.jp/media/google-ai-plus-students/", "platform": "blog", "price": null, "paid": false, "price_verified": false, "quality_note": "検索結果のみ確認。条件・申込・解約まで網羅した無料記事がすでにある。"}
+      ],
+      "price_range": {"min": null, "max": null, "note": "有料の競合は見つからず（価格確認済みは無料1件のみ）。Google公式noteや学生アンバサダーが無料で発信しており、有料化は難しい領域。"},
+      "gap": "有料記事は見当たらないが、公式ブログ・公式note・学生アンバサダー・企業ブログが申込〜解約まで無料で詳しく書いており、無料情報が飽和気味。残る空白は『前回キャンペーンとの違いの混乱の整理』と『学生向け新機能を授業でどう使うか』くらいで、公式情報で足りる部分が大きいため gap は低く評価した。",
+      "differentiation_hint": "『AI Plus無料』と『AI Pro 75%オフ』のどちらが得かの比較表、1年後の自動課金を止める日のリマインド手順、大学のAI利用ルールと合わせた使い方（候補3と組み合わせるなら同じ記事にまとめる案もある）。",
+      "primary_info_needed": "実際に学生認証〜申込〜自動更新オフまで操作したスクショ（学生である書き手、または学生の協力者が必要）。学習ノートブック等の新機能を授業資料で試した結果。",
+      "risks": [
+        "寿命が短い: 申込期限が2026年12月31日で、それ以降は検索需要がほぼなくなる。",
+        "Google公式が無料で情報を出しており、有料記事の説得力が出しにくい。",
+        "学生認証の手順を書き手が実際に試せない場合は書けない（学生であることが実質条件）。",
+        "キャンペーン条件の変更に追従する必要がある。"
+      ],
+      "scores": {"demand": 4, "gap": 2, "willingness_to_pay": 2, "feasibility": 4, "longevity": 2},
+      "score_rationale": "demand 4: 学部在学者約264.6万人が対象になりうる期限つきの特典で、ITmedia等でも報道されたが、検索需要の実数は未確認。gap 2: 公式ブログ・公式note・企業ブログが無料で網羅しており、古い情報の混乱が残る程度。willingness_to_pay 2: 特典自体が無料で、無料記事で十分に申し込めるため払う動機は弱い。feasibility 4: 公開情報で書けるが、学生認証の実操作スクショには学生の立場が要る。longevity 2: 12月31日の申込期限までの約3.5か月。"
+    },
+    {
+      "title": "大学のAI利用ルールに沿った『講義の文字起こし・要約→復習』と『レポート作成』のAIワークフロー（ツール横断・AI利用の明示の書き方つき）",
+      "summary": "各大学の生成AIガイドライン（丸写しNG・利用の明示・教員の指示優先など）を整理し、そのルールの範囲でNotebookLM・Gemini・ChatGPT等を使って講義の復習とレポート作成を進める手順、講義録音の許可の取り方、AI利用の明示文の書き方をまとめる。",
+      "target_reader": "生成AIを勉強に使いたいが『どこまでOKか』がわからず不安な大学1〜2年生。とくにレポート課題が増える前期末・後期末前の学生。",
+      "reader_pain": "大学・授業ごとにルールが違い、使ったら不正扱いになるのでは、使わないと損なのでは、と迷う。ネットには『AIバレしない』系の情報が多く、正しい使い方の手順がまとまっていない。講義を録音してAIで文字起こししてよいのかもわからない。",
+      "keywords": [
+        "大学 レポート 生成AI 使っていい",
+        "レポート AI 利用 明示 書き方",
+        "講義 録音 文字起こし AI 大学",
+        "NotebookLM 大学生 復習"
+      ],
+      "channels": ["Google検索", "X", "note内の回遊"],
+      "demand_evidence": [
+        {
+          "claim": "文部科学省が大学・高専に対し、生成AI利用について実態に応じた指針づくりを求める通知を出した。学生の主体的な学びの補助ならOK、レポートの丸写しはNGという方向性（検索結果の要約で確認）。",
+          "source": {"url": "https://toyokeizai.net/articles/-/687743", "title": "大学･高専での生成AI使用､文科省が実態に応じた指針づくり求める通知 学生の主体的な学び補助ならOK､レポート丸写しはNG", "publisher": "東洋経済オンライン", "type": "news", "published": "不明"},
+          "confidence": "medium"
+        },
+        {
+          "claim": "北里大学は2026年4月1日版の学生向け生成AIガイドラインを公表しており、授業・レポート・試験での利用は科目ごとに担当教員に確認することを求めている（2026年度も各大学でルール整備が続いている例）。",
+          "source": {"url": "https://www.kitasato-u.ac.jp/cdhe/news/download/gen_ai_guidelines_document.pdf", "title": "北里大学における生成AIの利用に関する学生向けガイドライン Ver.1.0 2026年4月1日版", "publisher": "北里大学", "type": "official", "published": "2026-04"},
+          "confidence": "medium"
+        },
+        {
+          "claim": "大学教育学会の課題研究として『高等教育機関における生成AI導入の実態調査』（2025年9〜10月実施）が公開されており、大学ごとに対応が分かれている実態が調べられている（詳細の数値は未確認）。",
+          "source": {"url": "https://genai-higher-ed-jp.github.io/survey-2025-sep-oct/", "title": "高等教育機関における生成AI導入の実態調査", "publisher": "大学教育学会 課題研究", "type": "primary", "published": "2025"},
+          "confidence": "low"
+        },
+        {
+          "claim": "Yahoo!知恵袋に『大学の講義の文字起こしにおすすめのツールを教えてください』という質問がある（検索結果のタイトルで確認）。",
+          "source": {"url": "https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q14307530954", "title": "大学の講義の文字起こしにおすすめのツールを教えてください。 - Yahoo!知恵袋", "publisher": "Yahoo!知恵袋", "type": "qa", "published": "不明"},
+          "confidence": "low"
+        },
+        {
+          "claim": "大学学部の在学者は約264.6万人（令和7年5月1日現在、過去最多）。",
+          "source": {"url": "https://www.mext.go.jp/b_menu/toukei/chousa01/kihon/kekka/k_detail/2025.htm", "title": "学校基本調査－令和7年度 結果の概要－", "publisher": "文部科学省", "type": "official", "published": "2025-12"},
+          "confidence": "medium"
+        }
+      ],
+      "competitors": [
+        {"title": "大学生・院生におすすめ！論文・課題レポート作成AIの使い方講座", "url": "https://note.com/sharakusatoh/n/ne927ca24af33", "platform": "note", "price": null, "paid": false, "price_verified": true, "quality_note": "開いて無料と確認。2024-06公開・2025-08更新。ChatGPTのカスタムGPT中心で、大学ガイドラインに従う旨の注記はあるが、ルール別の整理や講義文字起こしは扱っていない。"},
+        {"title": "【コピペOK】2000字レポートの書き方テンプレ｜大学生向け完全ガイド", "url": "https://note.com/shiny_impala8173/n/n055e26d01618", "platform": "note", "price": null, "paid": false, "price_verified": true, "quality_note": "開いて無料と確認（2026-03）。別売の有料教材へ誘導しているが価格は未確認。『AIバレしない』系の訴求で大学ルールへの言及なし。"},
+        {"title": "「生成AIを活用したレポート・論文の書き方」という本を出版します", "url": "https://note.com/itot0103/n/nd2f8ebb5c565", "platform": "note", "price": null, "paid": false, "price_verified": false, "quality_note": "書籍の出版告知（検索結果のみ確認）。書籍の価格・発売日は未確認。初心者と大学教員向けの書籍が存在する。"},
+        {"title": "大学生のための生成AI活用術｜レポート・研究・就活で差をつける5つのステップ完全ガイド", "url": "https://note.com/moriyamasateru/n/n3a5a8389ffae", "platform": "note", "price": null, "paid": false, "price_verified": false, "quality_note": "検索結果のみ確認。有料かどうか未確認。"}
+      ],
+      "price_range": {"min": null, "max": null, "note": "有料の競合は価格確認済み0件（開いたnote2本は無料）。『AIバレしない』系の別売教材と書籍が有料で存在するが価格は未確認。"},
+      "gap": "無料記事は多いが、ChatGPT中心の『書かせ方』か『バレない』系の訴求が目立ち、各大学ガイドラインの共通点（丸写しNG・利用の明示・教員の指示優先）を整理したうえで、その範囲内で使える手順・明示文テンプレ・講義録音の許可の取り方までまとめたものは、開いた範囲では見当たらなかった。大学の公式ガイドラインは大学ごとにPDFで散らばっており、学生が横断して読める形になっていない。",
+      "differentiation_hint": "複数大学の公開ガイドラインの共通ルール表（出典つき）、『この使い方はOK/要確認/NG』の判定表、AI利用の明示文テンプレ、講義録音の許可を教員に頼むメール文例。ツール非依存にしてツールの仕様変更に強くする。",
+      "primary_info_needed": "複数大学（5〜10校）の公開ガイドラインの読み込みと比較表の作成。書き手自身が講義資料でNotebookLM等を試した画面。可能なら学生の実体験。",
+      "risks": [
+        "学業不正の助長と受け取られない書き方が必要（丸写し・代筆をすすめない、最終判断は各大学・教員の指示と明記）。",
+        "大学ガイドラインは改訂されるので、引用時点を明記し年度ごとに更新する。",
+        "講義の録音・資料のAIへのアップロードは著作権・学内規程に関わるため、許可が前提と明記する。",
+        "候補2（Google AI Plus学生特典）と読者が重なるので、出すならどちらかに寄せるか1本にまとめる。"
+      ],
+      "scores": {"demand": 4, "gap": 3, "willingness_to_pay": 3, "feasibility": 4, "longevity": 4},
+      "score_rationale": "demand 4: 学部在学者約264.6万人、文科省の通知や大学ごとのガイドライン整備が続き、知恵袋にも講義文字起こしの質問があるが、検索量の実数は未確認。gap 3: 無料記事は多いが『ルール準拠』で整理したものは少なく、有料側は『バレない』系が中心で質に難がある。willingness_to_pay 3: 不正扱い・単位を落とす失敗を避けられるが、無料記事で我慢できる層も多い。feasibility 4: 公開ガイドラインと自分の試用で書けるが、複数大学の比較は手間がかかる。longevity 4: ツールに依存しない構成にすれば1年以上売れ、毎年度の更新で継続できる。"
+    },
+    {
+      "title": "機種変更で『詰む』アプリの引き継ぎチェックリスト 2026年秋版（スマホのマイナンバーカード/マイナアプリ・モバイルSuica・銀行アプリ・認証アプリ・LINE）",
+      "summary": "新iPhone発売期に合わせ、機種変更で自動では引き継がれず、失敗するとログイン不能・再発行が必要になるアプリ（スマホのマイナンバーカード、認証アプリ、銀行・決済アプリ、モバイルSuica、LINE）について、旧端末を手放す前にやる順番をチェックリストにまとめる。",
+      "target_reader": "この秋に機種変更（iPhone→iPhone、Android→iPhone等）を予定している人。とくにスマホにマイナンバーカードを入れている人、2段階認証アプリや銀行アプリを使っている学生・若い社会人。",
+      "reader_pain": "クイックスタート等でデータは移っても、スマホ用電子証明書や認証アプリ、銀行アプリのワンタイムパスワードは移らない。旧端末を初期化・下取りに出した後に気づくと、ログインできない・窓口での手続きが必要になる。情報がアプリごとに散らばっていて、どの順番でやればいいかわからない。",
+      "keywords": [
+        "機種変更 やること チェックリスト 2026",
+        "機種変更 マイナンバーカード iPhone 引き継ぎ",
+        "機種変更 認証アプリ 引き継ぎ 失敗",
+        "機種変更 銀行アプリ ログインできない"
+      ],
+      "channels": ["Google検索", "X", "note内の回遊"],
+      "demand_evidence": [
+        {
+          "claim": "マイナポータル公式FAQ: Android端末に登録したスマホ用電子証明書はiPhoneに引き継げず、機種変更後のiPhoneで改めて追加が必要。旧端末の失効は追加手続きの中で行え、旧端末が通信・電源オン等の状態である必要がある。",
+          "source": {"url": "https://faq.myna.go.jp/faq/show/11905?category_id=252&site_domain=default", "title": "スマホ用電子証明書を登録していたAndroid端末からiPhoneへ機種変更を行う際の手続方法を教えてください", "publisher": "マイナポータル（デジタル庁）", "type": "official", "published": "不明"},
+          "confidence": "high"
+        },
+        {
+          "claim": "マイナポータル公式FAQに『機種変更をして、スマホ用電子証明書を登録したスマートフォンを失効手続前に処分してしまいました。どうすればよいですか』という項目があり、手放した後に困るケースが想定されている。",
+          "source": {"url": "https://faq.myna.go.jp/faq/show/7456?category_id=252&site_domain=default", "title": "機種変更をして、スマホ用電子証明書を登録したスマートフォンを失効手続前に処分してしまいました。どうす…", "publisher": "マイナポータル（デジタル庁）", "type": "official", "published": "不明"},
+          "confidence": "high"
+        },
+        {
+          "claim": "iPhoneのマイナンバーカード保有枚数は2026年1月21日時点で500万枚を突破しており、機種変更時に再登録が必要になる層が大きい。",
+          "source": {"url": "https://k-tai.watch.impress.co.jp/docs/news/2080324.html", "title": "「iPhoneのマイナンバーカード」保有枚数が500万枚突破", "publisher": "ケータイ Watch", "type": "news", "published": "2026-01"},
+          "confidence": "medium"
+        },
+        {
+          "claim": "iPhone 18 Pro系は9月12日予約開始・9月18日発売が有力とする報道・予想記事が出ている（Apple公式の発表は未確認。予想ベース）。",
+          "source": {"url": "https://iphone-mania.jp/iphone18/", "title": "iPhone18の予約・発売日・最新リークまとめ【2026年9月】", "publisher": "iPhone Mania", "type": "news", "published": "2026-09"},
+          "confidence": "low"
+        }
+      ],
+      "competitors": [
+        {"title": "【保存版】Android機種変更で“詰まない”ためのチェックリスト─ eSIM・2段階認証・Suica・キャッシュレスの落とし穴", "url": "https://note.com/u10/n/n206d27e1ea85", "platform": "note", "price": null, "paid": false, "price_verified": true, "quality_note": "開いて無料と確認（2025-12）。実体験ベースで良質だが、Android→Androidの個別アプリ中心で、スマホのマイナンバーカードへの言及なし。"},
+        {"title": "【失敗しない】iPhone→iPhone 機種変更の注意点まとめ（チェックリスト付き）", "url": "https://note.com/dandy_coyote4400/n/n390d79dedf51", "platform": "note", "price": null, "paid": false, "price_verified": false, "quality_note": "検索結果のみ確認。LINE・銀行・eSIM・認証アプリなどの注意点。有料かどうか未確認。"},
+        {"title": "【マイナ】スマホを機種変更したらするべき事", "url": "https://note.com/brainy_hosta942/n/n0ecc64ddd408", "platform": "note", "price": null, "paid": false, "price_verified": false, "quality_note": "検索結果のみ確認。マイナ関連の機種変更手続き。マイナアプリ刷新後の内容かは不明。"}
+      ],
+      "price_range": {"min": null, "max": null, "note": "有料の競合は価格確認済み0件（開いた1本は無料）。無料のチェックリスト記事はnote・ブログに多数。"},
+      "gap": "機種変更チェックリストの無料記事はnote・キャリア・ブログに多く、個別アプリの手順も各社公式にある。一方、開いた良質な無料記事でもスマホのマイナンバーカードには触れておらず、8月25日のマイナアプリ刷新・Android刷新予定を反映し、『旧端末を手放す前にやる順番』でアプリ横断に並べ直したものは見当たらなかった。無料情報の量が多いため gap は中程度。",
+      "differentiation_hint": "『旧端末を初期化する前』『新端末の初期設定直後』『1週間以内』の時系列チェックリスト、iPhone→iPhone／Android→iPhone／iPhone→Androidの分岐表、失敗したときの復旧窓口一覧。印刷・スクショ保存できる1枚版を付ける。",
+      "primary_info_needed": "書き手自身の機種変更（この秋）での実操作記録とスクショ。主要銀行・決済アプリの公式の機種変更手順の確認（リンク集）。",
+      "risks": [
+        "候補1（マイナアプリ）とスマホ用電子証明書の部分が重なるので、両方出す場合は相互リンクで役割分担する。",
+        "銀行・決済アプリの手順は各社で頻繁に変わるため、公式ページへのリンクを主にして手順の転記は最小限にする。",
+        "iPhone 18 の発売日は予想情報のみで未確認。",
+        "無料情報が多く、タイトルと無料部分で『他にない理由』を示さないと売れにくい。"
+      ],
+      "scores": {"demand": 4, "gap": 3, "willingness_to_pay": 3, "feasibility": 4, "longevity": 3},
+      "score_rationale": "demand 4: 機種変更は毎年大量に発生し、スマホのマイナンバーカードだけで500万枚超が再登録の対象になりうる。ただし機種変更トラブルの割合を示す統計は見つけられなかった。gap 3: 無料チェックリストは多いが、マイナアプリ刷新とスマホのマイナンバーカードを含めたアプリ横断・時系列の整理は見当たらない。willingness_to_pay 3: ログイン不能や窓口での再手続きといった失敗を避けられるが、無料記事で済ませる人も多い。feasibility 4: 公式FAQと自分の機種変更で書けるが、実機が必要。longevity 3: 新機種の発売期（秋・春）ごとに売れ、年1回の更新で継続できるが、各アプリの仕様変更が早い。"
+    },
+    {
+      "title": "卒業前にやる大学アカウント（Google Workspace／Microsoft 365）のデータ引っ越し手順と、卒業後に困らない代替サービスの選び方",
+      "summary": "大学発行のGoogle・Microsoftアカウントは卒業後に停止・削除され、メール・ドライブ・写真・研究データ・各種サービスのログイン用メールアドレスが使えなくなる。削除前にやるデータ移行（Google Takeoutの『コンテンツの移行』等）、OneDrive/Officeの代替、学校メールで登録したサービスのメールアドレス変更を手順化する。",
+      "target_reader": "卒業・修了を控えた大学4年生・大学院生・高専生（高校卒業生も一部）。とくに大学アカウントのメールで各種サービスに登録している人、ドライブやOneDriveに卒論・研究データ・写真を置いている人。",
+      "reader_pain": "卒業後しばらくしてアカウントが削除され、メールが受け取れない、データにアクセスできない、学校のメールアドレスで登録したサービスにログインできない、と気づいたときには復元できない。大学ごとの案内はあるが、読まずに卒業する人が多く、何をどの順番でやればいいかわからない。",
+      "keywords": [
+        "卒業 大学 Googleアカウント データ移行",
+        "卒業後 Microsoft 365 使えない",
+        "学校のGoogleアカウント 個人 移行 やり方",
+        "大学 メールアドレス 卒業後 削除"
+      ],
+      "channels": ["Google検索", "note内の回遊"],
+      "demand_evidence": [
+        {
+          "claim": "Googleアカウントコミュニティに『学校で配布されたアカウントが卒業から9ヶ月経ってから削除され、ログインできず、メールが受け取れず困っている』という投稿がある（検索結果のタイトルで確認）。",
+          "source": {"url": "https://support.google.com/accounts/thread/249957517/%E5%AD%A6%E6%A0%A1%E3%81%A7%E9%85%8D%E5%B8%83%E3%81%95%E3%82%8C%E3%81%9F%E3%82%A2%E3%82%AB%E3%82%A6%E3%83%B3%E3%83%88%E3%81%8C%E5%8D%92%E6%A5%AD%E3%81%8B%E3%82%899%E3%83%B6%E6%9C%88%E7%B5%8C%E3%81%A3%E3%81%A6%E3%81%8B%E3%82%89%E5%89%8A%E9%99%A4%E3%81%95%E3%82%8C%E3%81%BE%E3%81%97%E3%81%9F%E3%80%82%E3%81%9D%E3%81%AE%E3%82%A2%E3%82%AB%E3%82%A6%E3%83%B3%E3%83%88%E3%81%AF%E5%AD%A6%E5%95%8F%E3%81%AB%E9%96%A2%E3%81%99%E3%82%8B%E3%82%A2%E3%82%AB%E3%82%A6%E3%83%B3%E3%83%88%E3%81%AE%E3%83%A1%E3%83%BC%E3%83%AB%E3%82%A2%E3%83%89%E3%83%AC%E3%82%B9%E3%81%A8%E3%81%97%E3%81%A6%E4%BD%BF%E7%94%A8%E3%81%97%E3%81%A6%E3%81%84%E3%81%9F%E3%81%9F%E3%82%81%E3%80%81%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3%E3%81%A7%E3%81%8D%E3%81%9A%E3%80%81%E3%83%A1%E3%83%BC%E3%83%AB%E3%81%8C%E5%8F%97%E3%81%91%E5%8F%96%E3%82%8C%E3%81%9A%E5%9B%B0%E3%81%A3%E3%81%A6%E3%81%84%E3%81%BE%E3%81%99%E3%80%82?hl=ja", "title": "学校で配布されたアカウントが卒業から9ヶ月経ってから削除されました。…ログインできず、メールが受け取れず困っています。", "publisher": "Google アカウント コミュニティ", "type": "qa", "published": "不明"},
+          "confidence": "medium"
+        },
+        {
+          "claim": "Yahoo!知恵袋に、学校で配布されたGoogleアカウントが3月末に削除されると聞いた高校卒業生や、卒業に伴うログイン・移行についての質問がある（検索結果のタイトルで確認）。",
+          "source": {"url": "https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q12294876237", "title": "今月高校を卒業した者なんですが、3月末に学校で使っていたGoogleアカウントが削除されてしまうと聞きました。 - Yahoo!知恵袋", "publisher": "Yahoo!知恵袋", "type": "qa", "published": "不明"},
+          "confidence": "medium"
+        },
+        {
+          "claim": "筑波大学は卒業後に大学のMicrosoftアカウントによるOffice（Word、Excel等）が使えなくなることを案内している。電気通信大学・広島大学・横浜国立大学なども卒業・退学時のアカウント手続きのページを個別に設けており、案内が大学ごとに散らばっている。",
+          "source": {"url": "https://www.cc.tsukuba.ac.jp/wp/ufaq/m365_use_after_graduation/", "title": "卒業後のMicrosoft製品利用について", "publisher": "筑波大学 情報環境機構 学術情報メディアセンター", "type": "official", "published": "不明"},
+          "confidence": "high"
+        },
+        {
+          "claim": "Google Workspaceの管理者ヘルプに『卒業予定の生徒にデータの移行を許可する』機能があり、学校側の設定によって個人アカウントへのコピー（コンテンツの移行）ができるかどうかが変わる。",
+          "source": {"url": "https://support.google.com/a/answer/6364687?hl=ja", "title": "卒業予定の生徒にデータの移行を許可する - Google Workspace 管理者 ヘルプ", "publisher": "Google", "type": "official", "published": "不明"},
+          "confidence": "high"
+        },
+        {
+          "claim": "大学学部の在学者は約264.6万人、大学院は約27.7万人（令和7年5月1日現在）。毎年このうち卒業・修了する層が対象になる（卒業者数そのものは未確認）。",
+          "source": {"url": "https://www.mext.go.jp/b_menu/toukei/chousa01/kihon/kekka/k_detail/2025.htm", "title": "学校基本調査－令和7年度 結果の概要－", "publisher": "文部科学省", "type": "official", "published": "2025-12"},
+          "confidence": "medium"
+        }
+      ],
+      "competitors": [
+        {"title": "学校のGoogleアカウントを個人のGoogleアカウントに移行する方法", "url": "https://note.com/perfect_blue5/n/na721fa297fa3", "platform": "note", "price": null, "paid": false, "price_verified": true, "quality_note": "開いて無料と確認（2026-02）。Google Takeoutの『コンテンツの移行』に絞った手順で、Microsoft 365や他サービスのメールアドレス変更には触れていない。"},
+        {"title": "卒業生必見！学校のアカウントで卒業までにしておくべきこと&卒業後はどうなるの？", "url": "https://note.com/nshigh_newspaper/n/n85732870c20a", "platform": "note", "price": null, "paid": false, "price_verified": false, "quality_note": "N高・S高新聞（検索結果のみ確認）。特定の学校向け。"},
+        {"title": "東京女子大学情報処理センター [ガイド] 卒業前の準備", "url": "https://sites.google.com/cis.twcu.ac.jp/cisqa/leavingTWCU", "platform": "other", "price": null, "paid": false, "price_verified": false, "quality_note": "大学公式の無料ガイド（検索結果のみ確認）。自校向けで、他大学の学生には当てはまらない部分がある。"}
+      ],
+      "price_range": {"min": null, "max": null, "note": "有料の競合は見つからず（価格確認済みは無料1件のみ）。大学公式・個人noteの無料記事のみ。"},
+      "gap": "各大学の公式案内は自校のアカウント仕様に限られ、個人のnote・ブログはGoogleのデータ移行だけ、など部分的な情報が散らばっている。Google・Microsoftの両方と、『学校メールで登録したサービス（就活サイト、SNS、学割サブスク等）のメールアドレス変更』までを卒業前の時系列でまとめた記事は、site:note.com 検索と大学ページの確認では見つからなかった。",
+      "differentiation_hint": "『卒業3か月前／1か月前／最終週』の時系列チェックリスト、大学アカウントで登録したサービスの洗い出し方（Gmail検索のコツ）、学校側が移行を許可していない場合の代替手順（Takeoutダウンロード等）、OneDrive/Officeの卒業後の選択肢の比較表。",
+      "primary_info_needed": "学校アカウント→個人アカウントへの移行（Google Takeout）と、OneDriveのデータ退避を実際に行ったスクショ。複数大学の卒業時アカウント停止時期の比較（公開ページから）。",
+      "risks": [
+        "季節性: 需要のピークは1〜3月で、今（9月）出しても売れ始めるのは冬以降。",
+        "大学ごとに停止時期・移行可否が違うため、『必ず自分の大学の案内を確認』と明記する必要がある。",
+        "学割サブスクの切り替え（料金）まで深く扱うと『学生のお金と手続き』担当と重なるので、アカウント・データの話に絞る。",
+        "Google・Microsoftの仕様変更で手順画面が変わる。"
+      ],
+      "scores": {"demand": 3, "gap": 4, "willingness_to_pay": 3, "feasibility": 4, "longevity": 4},
+      "score_rationale": "demand 3: 毎年の卒業生が対象で、Googleコミュニティ・知恵袋に削除後に困った投稿があるが、検索量・卒業者数は未確認で、ピークが1〜3月に限られる。gap 4: 有料記事はなく、大学公式・個人記事は自校向けやGoogleのみなど部分的で、横断した整理がない。willingness_to_pay 3: 削除後は復元できないデータ・メールの喪失を防げるが、大学の無料案内で済ませる人もいる。feasibility 4: 公開情報と自分のアカウント操作で書けるが、学校アカウントを持つ立場（または協力者）が必要。longevity 4: 毎年の卒業期に売れる定番テーマで、年1回の更新で継続できる。"
+    }
+  ]
+}

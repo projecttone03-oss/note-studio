@@ -1,0 +1,42 @@
+{
+  "theme_id": 1,
+  "value_proposition": "【テスト用の架空データ】公式資料を読む時間を10分に短縮する。",
+  "reader_before_after": {"before": "何から手を付ければいいか分からない", "after": "自分に必要な手続きと期限が分かる"},
+  "why_paid": ["改正後の情報が1か所にまとまっていない", "ケース別の比較表がない"],
+  "differentiators": [
+    {"type": "diagram", "title": "手続きフローチャート", "description": "分岐を1枚で示す",
+     "how_to_make": "公式資料から分岐条件を抜き出して作図", "effort": "medium"},
+    {"type": "primary_info", "title": "実際の手続き記録", "description": "書き手の体験",
+     "how_to_make": "書き手が手続きしてスクショを取る（人間の作業）", "effort": "high"}
+  ],
+  "paywall": {
+    "free_part": ["制度変更の要点", "フローチャートの前半"],
+    "paid_part": ["ケース別の手続き手順", "チェックリスト"],
+    "boundary_hook": "ここから先は、あなたのケースで何をいつまでにやるかを1つずつ確認できます。",
+    "rationale": "自分の場合を知りたくなった直後に区切る"
+  },
+  "titles": [
+    {"text": "【2026年版】架空制度の手続きを10分で整理", "angle": "時短", "keywords": ["架空制度 手続き"]},
+    {"text": "架空制度、あなたは対象？ケース別チェック", "angle": "対象者特定"},
+    {"text": "架空制度の申請漏れを防ぐチェックリスト", "angle": "損失回避"}
+  ],
+  "outlines": [
+    {"name": "手順型", "concept": "順番に進めたい人向け", "sections": [
+      {"heading": "何が変わったか", "paid": false, "points": ["要点3つ"]},
+      {"heading": "あなたは対象か", "paid": false},
+      {"heading": "ケース別手順", "paid": true, "points": ["A", "B"]},
+      {"heading": "チェックリスト", "paid": true}
+    ]},
+    {"name": "Q&A型", "concept": "疑問から入りたい人向け", "sections": [
+      {"heading": "よくある疑問", "paid": false},
+      {"heading": "つまずきポイント", "paid": true},
+      {"heading": "まとめ", "paid": true}
+    ]}
+  ],
+  "price": {"suggested": 400, "rationale": "競合より少し低めの入口価格", "alternatives": [300, 500]},
+  "claims": [
+    {"claim": "架空の期限がある", "source": {"url": "https://example.com/d", "title": "例示ページD", "type": "official"},
+     "confidence": "high"}
+  ],
+  "open_questions": ["実際に手続きした経験はありますか？"]
+}

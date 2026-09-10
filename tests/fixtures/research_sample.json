@@ -1,0 +1,52 @@
+{
+  "genre": "テスト",
+  "brief": "【テスト用の架空データ】動作確認のためのサンプル。",
+  "method": "架空",
+  "queries": ["サンプルクエリ1", "サンプルクエリ2"],
+  "candidates": [
+    {
+      "title": "サンプルテーマA：架空の制度変更の手続き整理",
+      "summary": "架空の制度変更に伴う手続きを整理する記事。",
+      "target_reader": "架空の制度の対象者",
+      "reader_pain": "手続きが分かりにくい",
+      "keywords": ["架空制度 手続き", "架空制度 期限"],
+      "channels": ["Google検索"],
+      "demand_evidence": [
+        {"claim": "架空の対象者が多い", "source": {"url": "https://example.com/a", "title": "例示ページA",
+         "publisher": "Example", "type": "official", "published": "2026-08"}, "confidence": "high"},
+        {"claim": "同じ質問が繰り返されている", "source": {"url": "https://example.com/b", "title": "例示ページB",
+         "type": "qa"}, "confidence": "medium"}
+      ],
+      "competitors": [
+        {"title": "架空の競合記事", "url": "https://example.com/c", "platform": "note", "price": 500,
+         "paid": true, "price_verified": false, "quality_note": "改正前の情報"}
+      ],
+      "price_range": {"min": 300, "max": 500, "note": "架空"},
+      "gap": "改正後の情報を整理した有料記事がない（架空）",
+      "differentiation_hint": "手続きフローチャート",
+      "primary_info_needed": "実際に手続きした記録",
+      "risks": ["制度の再変更"],
+      "scores": {"demand": 4, "gap": 4, "willingness_to_pay": 4, "feasibility": 4, "longevity": 3},
+      "score_rationale": "架空"
+    },
+    {
+      "title": "サンプルテーマB：架空ツールの使い方",
+      "summary": "架空ツールの使い方。",
+      "target_reader": "架空ツールの初心者",
+      "reader_pain": "日本語情報が少ない",
+      "keywords": ["架空ツール 使い方", "架空ツール 日本語"],
+      "channels": ["X", "Google検索"],
+      "demand_evidence": [
+        {"claim": "架空ツールの利用者が増えている", "source": {"url": "https://example.com/a", "title": "例示ページA",
+         "type": "official"}, "confidence": "low"}
+      ],
+      "competitors": [],
+      "price_range": {"min": null, "max": null, "note": "競合なし"},
+      "gap": "有料記事なし（架空）",
+      "primary_info_needed": "実際に使った画面",
+      "risks": [],
+      "scores": {"demand": 2, "gap": 5, "willingness_to_pay": 2, "feasibility": 5, "longevity": 2},
+      "score_rationale": "架空"
+    }
+  ]
+}

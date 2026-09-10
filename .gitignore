@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# 書籍の本体は著作物なのでアップロードしない（_書籍リスト.md と README.md は含める）
+references/books/**/*.pdf
+references/books/**/*.epub
+references/books/**/*.jpg
+references/books/**/*.png
+
+# Mac専用（ビルドした PDF ツール、このMacが「判断する側」だという目印）
+tools/pdftool
+.ns-local
+
+# Python
+__pycache__/
+*.pyc
