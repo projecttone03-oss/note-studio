@@ -12,6 +12,10 @@
                                               送る全文・警告・費用の目安を表示し、yes と打ったときだけ送る
   ./nw research list|show|import|usage ...    リサーチ資料と今月の使用額
   ./nw research key set|status|delete         Perplexity のAPIキー（set は画面に出さずに入力）
+  ./nw ideas run [--show-prompt]              ネタ出し（渡す文章の文字数と材料の件数を表示し、yes で実行）
+  ./nw ideas list [--status 未検討]|set CID 状態|to-research CID...
+  ./nw skills show|edit                       得意・経験リスト（edit は $EDITOR か標準入力）
+  ./nw reaction add|list                      反応記録（スキ・コメント・購入の数を手で記録）
 
 作業フォルダが使えない（未初期化・未マウント）ときは終了コード2。check と rules は作業フォルダなしでも動く。
 """
@@ -517,6 +521,135 @@ def cmd_research_key_delete(args) -> None:
     print("APIキーを削除しました。" if _secrets().delete_api_key() else "削除するキーはありませんでした。")
 
 
+# ---------- ネタ出し ----------
+
+def _ideas():
+    from . import ideas
+    return ideas
+
+
+def _print_candidates(items) -> None:
+    I = _ideas()
+    if not items:
+        print("（該当する候補はありません）")
+        return
+    for c in items:
+        print(f"[{c.get('cid')}] {c.get('status')} ／ {c.get('type')} ／ {I.HYPOTHESIS}")
+        print(f"  ネタ: {c.get('idea')}")
+        print(f"  なぜ私に向いているか: {c.get('why_me') or '—'}"
+              + (f"（{', '.join(c.get('skills') or [])}）" if c.get("skills") else ""))
+        print(f"  想定する読者: {c.get('reader') or '—'}")
+        for pt in c.get("check_points") or []:
+            print(f"  確かめる点: {pt}")
+    print(f"\n{len(items)} 件")
+
+
+def cmd_ideas_run(args) -> None:
+    I = _ideas()
+    p = I.prepare()
+    if args.show_prompt:
+        print("===== Claude に渡す文章（これが全文です） =====")
+        print(p["prompt"])
+        print("===== ここまで =====\n")
+    print(f"Claude に渡す文章: {p['chars']}字（全文は --show-prompt で表示）")
+    print(f"材料: {I.summary_text(p['summary'])}")
+    print("かけら（体験談の素材）は入れていません。ツールなし・Web検索なし・追加料金なしで実行します。")
+    print("候補をトレンド調査に回すときは、送る前にもう一度確認します。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+    print("ネタを考えています（1〜数分かかることがあります）…", flush=True)
+    job = I.run_job(p["confirm_token"])
+    status = job.get("status")
+    if status == "done":
+        print(f"候補を {job.get('count', 0)} 件出しました（{job.get('session_id')}）。")
+        if job.get("excluded_rejected"):
+            print(f"却下したネタと同じ候補 {job['excluded_rejected']} 件は外しました。")
+        print()
+        _print_candidates([c for c in I.list_candidates() if c.get("session_id") == job.get("session_id")])
+    elif status == "limit":
+        print(_safe(job.get("error") or I.limit_message()), file=sys.stderr)
+        sys.exit(3)
+    else:
+        print(f"うまくいきませんでした: {_safe(job.get('error') or '理由は分かりませんでした')}", file=sys.stderr)
+        sys.exit(1)
+
+
+def cmd_ideas_list(args) -> None:
+    _print_candidates(_ideas().list_candidates(args.status or None))
+
+
+def cmd_ideas_set(args) -> None:
+    c = _ideas().set_status(args.cid, args.status)
+    print(f"{c['cid']} を「{c['status']}」にしました")
+
+
+def cmd_ideas_to_research(args) -> None:
+    print(_ideas().research_query(args.cids))
+    print("\n（表示しただけです。調べるときは、この文章を直してから ./nw research run --kind trend で送ってください）",
+          file=sys.stderr)
+
+
+def cmd_skills_show(args) -> None:
+    text = _ideas().get_skills()
+    print(text if text else "（まだ書いていません。./nw skills edit で書けます）")
+
+
+def cmd_skills_edit(args) -> None:
+    import subprocess
+    import tempfile
+    I = _ideas()
+    editor = os.environ.get("VISUAL") or os.environ.get("EDITOR")
+    if editor and sys.stdin.isatty():
+        import shlex
+        d = store.vault() / "profile"  # 一時ファイルも作業フォルダ（暗号化境界）の内側に作る
+        d.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(prefix=".skills-edit-", suffix=".md", dir=str(d))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(I.get_skills() + "\n")
+            if subprocess.call(shlex.split(editor) + [tmp]) != 0:
+                sys.exit("エディタが正常に終わらなかったため、保存しませんでした。")
+            text = Path(tmp).read_text(encoding="utf-8")
+        finally:
+            try:
+                os.unlink(tmp)
+            except FileNotFoundError:
+                pass
+    else:
+        if sys.stdin.isatty():
+            sys.exit("$EDITOR を設定するか、標準入力から流し込んでください（例: ./nw skills edit < skills.txt）。")
+        text = sys.stdin.read()
+    I.save_skills(text)
+    print(f"得意・経験リストを保存しました（{len(text.strip())}字）")
+
+
+def _reactions():
+    from . import reactions
+    return reactions
+
+
+def cmd_reaction_add(args) -> None:
+    r = _reactions().add_reaction(args.title, published=args.published, recorded=args.recorded, likes=args.likes,
+                                  comments=args.comments, purchases=args.purchases, memo=args.memo)
+    print(f"反応を記録しました（{r['id']}）: 「{r['title']}」 スキ {r['likes']}・コメント {r['comments']}・購入 {r['purchases']}")
+
+
+def cmd_reaction_list(args) -> None:
+    groups = _reactions().by_article()
+    if not groups:
+        print("（反応記録はまだありません）")
+        return
+    rows = []
+    for g in groups:
+        for r in g["records"]:
+            rows.append([r.get("id", ""), _one_line(g["title"], 30), r.get("published") or "—", r.get("recorded") or "—",
+                         str(r.get("likes", 0)), str(r.get("comments", 0)), str(r.get("purchases", 0)),
+                         _one_line(r.get("memo") or "", 20)])
+    print(_table(["ID", "記事", "公開日", "記録日", "スキ", "コメント", "購入", "メモ"], rows, right_from=4))
+    print("\n記事ごと・反応がよかった順（最新の記録の 購入→スキ→コメント）")
+
+
 # ---------- 引数 ----------
 
 class _Parser(argparse.ArgumentParser):
@@ -624,6 +757,37 @@ def build_parser() -> argparse.ArgumentParser:
     kk.add_parser("set", help="登録（画面に出さずに入力）").set_defaults(func=cmd_research_key_set)
     kk.add_parser("status", help="登録済みか").set_defaults(func=cmd_research_key_status)
     kk.add_parser("delete", help="登録したキーを削除").set_defaults(func=cmd_research_key_delete)
+
+    i = sub.add_parser("ideas", help="ネタ出し").add_subparsers(dest="sub", required=True)
+    a = i.add_parser("run", help="ネタを出す（渡す文章の文字数と材料の件数を表示し、yes と打ったときだけ実行）")
+    a.add_argument("--show-prompt", action="store_true", help="Claude に渡す全文を表示する")
+    a.set_defaults(func=cmd_ideas_run)
+    a = i.add_parser("list", help="候補の一覧")
+    a.add_argument("--status", choices=("未検討", "調査に回した", "保留", "却下"), default=None)
+    a.set_defaults(func=cmd_ideas_list)
+    a = i.add_parser("set", help="候補の状態を変える")
+    a.add_argument("cid")
+    a.add_argument("status", choices=("未検討", "調査に回した", "保留", "却下"))
+    a.set_defaults(func=cmd_ideas_set)
+    a = i.add_parser("to-research", help="選んだ候補から、トレンド調査の質問文を作って表示する（実行はしない）")
+    a.add_argument("cids", nargs="+")
+    a.set_defaults(func=cmd_ideas_to_research)
+
+    sk = sub.add_parser("skills", help="得意・経験リスト").add_subparsers(dest="sub", required=True)
+    sk.add_parser("show", help="表示").set_defaults(func=cmd_skills_show)
+    sk.add_parser("edit", help="書く（$EDITOR か標準入力）").set_defaults(func=cmd_skills_edit)
+
+    rx = sub.add_parser("reaction", help="反応記録").add_subparsers(dest="sub", required=True)
+    a = rx.add_parser("add", help="反応を記録する")
+    a.add_argument("title", help="記事名（公開タイトル）")
+    a.add_argument("--published", default="", help="公開日 YYYY-MM-DD")
+    a.add_argument("--recorded", default="", help="記録日 YYYY-MM-DD（省略すると今日）")
+    a.add_argument("--likes", type=int, default=0, help="スキ数")
+    a.add_argument("--comments", type=int, default=0, help="コメント数")
+    a.add_argument("--purchases", type=int, default=0, help="購入数")
+    a.add_argument("--memo", default="")
+    a.set_defaults(func=cmd_reaction_add)
+    rx.add_parser("list", help="記事ごとの一覧").set_defaults(func=cmd_reaction_list)
     return p
 
 
@@ -644,7 +808,7 @@ def main(argv=None) -> None:
         print("\n中止しました。", file=sys.stderr)
         sys.exit(130)
     except Exception as ex:  # リサーチは外部とやり取りするので、トレースバックではなく伏せ字済みの理由だけ出す
-        if getattr(args, "cmd", "") != "research":
+        if getattr(args, "cmd", "") not in ("research", "ideas"):
             raise
         print(_safe(f"エラー（{type(ex).__name__}）: {ex}"), file=sys.stderr)
         sys.exit(1)

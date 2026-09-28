@@ -205,6 +205,13 @@ pre.send{white-space:pre-wrap;word-break:break-word;background:#fbfdfe;border:2p
 .md h3{font-size:16px}.md h4{font-size:15px;margin:14px 0 4px}.md p{margin:6px 0 10px}
 .money{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
 .steps>li{margin-bottom:10px}
+.b-hyp{background:var(--warm-weak);color:var(--warm-dk);border:1px dashed var(--warm)}
+.icard{border-left-color:var(--sun)}.icard .idea{font-size:16px;font-weight:800;margin:4px 0 6px}
+.icard dl{margin:4px 0 8px}.icard dt{font-size:12px;color:var(--sub);font-weight:700;margin-top:6px}.icard dd{margin:0}
+.icard .pick{display:inline-flex;align-items:center;gap:8px;font-weight:800;cursor:pointer;min-height:40px}
+.icard .pick input{width:22px;height:22px;margin:0}
+.sticky{position:sticky;bottom:10px;z-index:5;background:var(--card);border-radius:16px;padding:10px 14px;box-shadow:var(--shadow)}
+.example{background:var(--main-weak);border-radius:14px;padding:12px 16px;margin:0 0 12px;border-left:6px solid var(--main)}
 @media(max-width:600px){main{padding:14px 12px 50px}.card{padding:16px 14px;border-radius:16px}
 .card h2,.ribbon{margin-left:-22px}h1{font-size:20px}.btnrow .btn{flex:1}}
 """
@@ -219,9 +226,9 @@ i.addEventListener('change',function(){var n=[];for(var k=0;k<i.files.length;k++
 ['dragleave','drop'].forEach(function(t){i.addEventListener(t,function(){b.classList.remove('over')})});});
 """
 
-NAV = (("home", "/", "ダッシュボード"), ("neta", "/neta", "ネタ帳"), ("kakera", "/kakera", "かけら"),
-       ("articles", "/articles", "記事と充足度"), ("research", "/research", "リサーチ"), ("check", "/check", "チェッカー"),
-       ("guide", "/guide", "使い方"))
+NAV = (("home", "/", "ダッシュボード"), ("ideas", "/ideas", "ネタ出し"), ("neta", "/neta", "ネタ帳"),
+       ("kakera", "/kakera", "かけら"), ("articles", "/articles", "記事と充足度"), ("research", "/research", "リサーチ"),
+       ("reactions", "/reactions", "反応記録"), ("check", "/check", "チェッカー"), ("guide", "/guide", "使い方"))
 
 
 def layout(title: str, body: str, active: str = "", flash: str = "", error: bool = False, nav: bool = True,
@@ -611,6 +618,7 @@ def page_home() -> str:
 <textarea name="body" rows="3" placeholder="思いついたことを1行でも" required></textarea>
 <div class="btnrow"><button class="btn warm">ネタを保存</button></div></form>
 <p class="small">未整理のネタ <b>{st.get("neta_unsorted", 0)}</b> 件 → <a href="/neta">ネタ帳を開く</a></p></div>
+{ideas_home_card()}
 {research_home_card()}
 <div class="card"><h2>使用状況</h2><div>{by_status or '<span class="muted">—</span>'}</div></div>
 <div class="card"><h2>下書きのチェック</h2><p class="small">禁句・個別助言に読める言い回し・ぼかすべき属性などを警告します（直すかどうかは人が決めます）。</p>
@@ -1338,11 +1346,305 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 """
 
 
+# ---------- ネタ出し ----------
+# ロジックは ideas.py。材料（得意・経験リスト・ネタ帳・反応記録の要約・過去の候補）は Anthropic の Claude に渡す
+# （Web検索はしない）。送る前に全文を見せて、OK を押してから渡す。かけらは材料にしない。
+
+def _ideas():
+    from . import ideas
+    return ideas
+
+
+def _reactions():
+    from . import reactions
+    return reactions
+
+
+IDEA_JOB_STATUS = {"running": ("考えています", "b-st"), "done": ("完了", "b-ok"), "error": ("失敗", "b-strong"),
+                   "limit": ("上限で停止", "b-warm")}
+IDEA_STATUS_CLASS = {"未検討": "b-st", "調査に回した": "b-ok", "保留": "b-tag", "却下": ""}
+IDEA_FILTERS = ("未検討", "調査に回した", "保留", "却下", "all")
+
+
+def idea_card(c: dict, selectable: bool = True, back: str = "") -> str:
+    I = _ideas()
+    cid = str(c.get("cid") or "")
+    status = str(c.get("status") or "")
+    skills = "".join(f'<span class="badge b-vp">{e(x)}</span>' for x in c.get("skills") or [])
+    pts = "".join(f"<li>{e(x)}</li>" for x in c.get("check_points") or [])
+    pick = (f'<label class="pick"><input type="checkbox" name="cids" value="{e(cid)}">選ぶ</label>'
+            if selectable and status != "却下" else "")
+    buttons = []
+    for st, label, cls in (("保留", "保留にする", ""), ("却下", "却下（次から出さない）", "ng"),
+                           ("未検討", "未検討に戻す", "")):
+        if st == status:
+            continue
+        buttons.append(f'<button class="btn sm {cls}" name="set" value="{e(cid)}|{e(st)}" formaction="/ideas/status"'
+                       f' formnovalidate>{e(label)}</button>')
+    back_field = f'<input type="hidden" name="back" value="{e(back)}">' if back else ""
+    ctrl = (f'<div class="btnrow">{"".join(buttons)}</div>' if selectable else
+            f'<form method="post" action="/ideas/status">{back_field}<div class="btnrow">{"".join(buttons)}</div></form>')
+    return f"""<div class="kcard icard" id="{e(cid)}"><div class="head"><b class="kid">{e(cid)}</b>
+<span class="badge b-hyp">{e(I.HYPOTHESIS)}</span><span class="badge b-tag">{e(c.get("type") or I.UNKNOWN_TYPE)}</span>
+<span class="badge {IDEA_STATUS_CLASS.get(status, "")}">{e(status)}</span>
+<span>{e((c.get("created") or "").replace("T", " ")[:16])}</span></div>
+{pick}<p class="idea">{e(c.get("idea"))}</p>
+<dl><dt>なぜ私に向いているか</dt><dd>{e(c.get("why_me") or "—")}<div>{skills}</div></dd>
+<dt>想定する読者</dt><dd>{e(c.get("reader") or "—")}</dd>
+<dt>トレンド調査で確かめるべき点</dt><dd>{f"<ul>{pts}</ul>" if pts else "—"}</dd></dl>{ctrl}</div>"""
+
+
+def page_ideas(qs: dict) -> str:
+    I = _ideas()
+    show = (qs.get("status") or ["未検討"])[0]
+    if show not in IDEA_FILTERS:
+        show = "未検討"
+    summ = I.materials_summary()
+    counts = I.counts_by_status()
+    total = sum(counts.values())
+    items = I.list_candidates(None if show == "all" else show)
+    tabs = "".join(
+        f'<a class="btn sm {"primary" if show == key else ""}" href="{e(qurl("/ideas", status=key))}">'
+        f'{e("すべて" if key == "all" else key)} {total if key == "all" else counts.get(key, 0)}</a>' for key in IDEA_FILTERS)
+    back = qurl("/ideas", status=show)
+    cards = "".join(idea_card(c, back=back) for c in items)
+    if cards:
+        cand_html = f"""<form method="post" action="/ideas/to-research"><input type="hidden" name="back" value="{e(back)}">{cards}
+<div class="sticky"><div class="btnrow" style="margin:0"><button class="btn primary">選んだ候補をトレンド調査に回す</button></div>
+<p class="small muted" style="margin:4px 0 0">リサーチの入力欄に、選んだ候補の「ネタ」と「確かめるべき点」だけが入ります。送る前に書き直せます。</p></div></form>"""
+    else:
+        cand_html = '<div class="card"><p class="muted">ここに表示する候補はありません。</p></div>'
+    skills_state = (f'<span class="badge b-ok">{summ["skills_chars"]}字</span>' if summ["skills_chars"]
+                    else '<span class="badge b-warm">まだ書いていません</span>')
+    skills_note = ("" if summ["skills_chars"] else
+                   '<div class="note">先に<a href="/settings/skills">得意・経験リスト</a>を書くと、あなたに合ったネタが出やすくなります。</div>')
+    running = I.running_job()
+    run_html = (f'<div class="note">いまネタを考えています。<a href="/ideas/jobs/{e(running.get("id"))}">様子を見る</a></div>'
+                if running else "")
+    return f"""<h1>ネタ出し</h1>
+<p class="muted">Claude に記事のネタ候補を出してもらいます（追加料金なし・Web検索なし）。候補は<b>仮説</b>です。
+本当に読みたい人がいるかは、あとで<b>トレンド調査</b>で確かめます。</p>
+<div class="btnrow" style="margin:0 0 16px"><a class="btn" href="/settings/skills">得意・経験リスト</a>
+<a class="btn" href="/reactions">反応記録</a><a class="btn" href="/ideas/history">過去のネタ出し</a></div>
+{run_html}
+<div class="grid"><div>
+<div class="btnrow" style="margin:0 0 14px">{tabs}</div>
+{cand_html}</div>
+<div><div class="card warm"><h2>ネタを出す</h2>{skills_note}
+<table><tr><th>得意・経験リスト</th><td>{skills_state}</td></tr>
+<tr><th>ネタ帳のメモ</th><td>{summ["neta"]}件</td></tr><tr><th>反応記録</th><td>{summ["reactions"]}件</td></tr>
+<tr><th>過去の候補</th><td>{summ["past"]}件</td></tr><tr><th>却下したネタ</th><td>{summ["rejected"]}件</td></tr></table>
+<p class="small muted">かけら（体験談の素材）は使いません。ネタ帳のうち「かけら化済み」のメモも使いません。</p>
+<form method="post" action="/ideas/confirm"><div class="btnrow"><button class="btn warm" style="width:100%">ネタを出す（確認画面へ・まだ送りません）</button></div></form></div>
+</div></div>"""
+
+
+def page_ideas_confirm(p: dict) -> str:
+    I = _ideas()
+    s = p.get("summary") or {}
+    running = I.running_job()
+    busy = (f'<div class="card alert"><h2>いま実行中です</h2><p>終わってからもう一度お試しください。'
+            f'<a href="/ideas/jobs/{e(running.get("id"))}">様子を見る</a></p></div>' if running else "")
+    return f"""<h1>ネタ出し: 渡す前の確認</h1>
+<div class="note strong"><b>まだ何も渡していません。</b>下の全文を Anthropic の Claude に渡します。よければ「OK」を押してください。</div>
+{busy}
+<div class="grid"><div class="card"><h2>Claude に渡す文章（これが全文です）</h2>
+<p class="small">渡す先: <b>Claude（この Mac/サーバーでログインしている Claude Code）</b> ／ ツールなし・Web検索なし ／ {e(p.get("chars", 0))}字</p>
+<pre class="send">{e(p.get("prompt", ""))}</pre></div>
+<div><div class="card warm"><h2>材料</h2><p>{e(I.summary_text(s))}</p>
+<p class="small muted">かけら（体験談の素材）は入れていません。</p>
+<p class="money">追加料金なし</p><p class="small muted">Claude の契約の利用枠を使います。Web検索はしないので、ここに書いた内容が検索として外に出ることはありません。</p>
+<div class="note small">ここで出た候補を<b>トレンド調査に回すとき</b>は、送る前に<b>もう一度確認画面</b>が出ます（そちらは Web検索をするので、ぼかすべき語の警告も出ます）。</div></div>
+<div class="card"><form method="post" action="/ideas/run"><input type="hidden" name="confirm_token" value="{e(p.get("confirm_token", ""))}">
+<button class="btn primary" style="width:100%"{" disabled" if running else ""}>OK。ネタを出す（追加料金なし）</button></form>
+<div class="btnrow"><a class="btn" style="width:100%" href="/ideas">やめる</a></div>
+<p class="small muted">内容を変えたいときは、<a href="/settings/skills">得意・経験リスト</a>や<a href="/neta">ネタ帳</a>を直してから、もう一度「ネタを出す」を押してください。</p></div></div></div>"""
+
+
+def page_ideas_job(job: dict) -> Tuple[str, str]:
+    I = _ideas()
+    status = job.get("status")
+    head = ""
+    info = (f'<p class="small muted">開始 {e((job.get("created") or "").replace("T", " "))} ／ '
+            f'{e(I.summary_text(job.get("materials_summary") or {}))}</p>')
+    retry = ('<form method="post" action="/ideas/confirm"><div class="btnrow"><button class="btn">もう一度ネタを出す（確認画面へ）</button>'
+             '<a class="btn" href="/ideas">ネタ出しへ</a></div></form>')
+    if status == "running":
+        head = '<meta http-equiv="refresh" content="5">'
+        body = ('<div class="card"><h2>ネタを考えています（1〜数分かかることがあります）</h2>'
+                '<p>この画面は5秒ごとに自動で更新します。閉じても続けます。終わったら「ネタ出し」に候補が並びます。</p></div>')
+    elif status == "done":
+        ex = int(job.get("excluded_rejected") or 0)
+        ex_html = f"<p>却下したネタと同じ候補が <b>{ex}</b> 件あったので、外しました。</p>" if ex else ""
+        body = (f'<div class="card"><h2>終わりました</h2><p>ネタの候補を <b>{e(job.get("count", 0))}</b> 件出しました。</p>{ex_html}'
+                f'<div class="btnrow"><a class="btn primary" href="/ideas">候補を見る</a>'
+                f'<a class="btn" href="/ideas/history/{e(job.get("session_id"))}">このときの候補だけ見る</a></div></div>')
+    elif status == "limit":
+        body = (f'<div class="card alert"><h2>Claude の利用上限に達しました</h2>'
+                f'<p>{e(I.limit_message(str(job.get("limit_resets_at") or "").replace("T", " ")))}</p>'
+                f'<div class="btnrow"><a class="btn" href="/ideas">ネタ出しへ</a></div></div>')
+    else:
+        raw = (f'<p><a href="/ideas/history/{e(job.get("session_id"))}">返ってきた文章を見る</a></p>'
+               if job.get("session_id") else "")
+        body = (f'<div class="card alert"><h2>うまくいきませんでした</h2><p>{lines_html(safe(job.get("error") or "理由は分かりませんでした。"))}</p>'
+                f'{raw}{retry}</div>')
+    return f"<h1>ネタ出しの実行 {e(job.get('id'))}</h1>{info}{body}", head
+
+
+def page_ideas_history() -> str:
+    I = _ideas()
+    rows = []
+    for s in I.list_sessions():
+        cands = s.get("candidates") or []
+        st = ('<span class="badge b-strong">読み取れず</span>' if s.get("raw") and not cands
+              else f'<span class="badge b-ok">{len(cands)}件</span>')
+        ex = int(s.get("excluded_rejected") or 0)
+        rows.append(f'<tr><td><a href="/ideas/history/{e(s.get("id"))}">{e(s.get("id"))}</a></td>'
+                    f'<td class="small">{e((s.get("created") or "").replace("T", " "))}</td><td>{st}</td>'
+                    f'<td class="num">{ex}</td><td class="small">{e(I.summary_text(s.get("materials_summary") or {}))}</td>'
+                    f'<td class="small">{e(s.get("model") or "—")}</td></tr>')
+    table = (f'<div class="tablewrap"><table><tr><th>ID</th><th>日時</th><th>候補</th><th class="num">却下と同じで除外</th>'
+             f'<th>材料</th><th>モデル</th></tr>{"".join(rows)}</table></div>' if rows
+             else '<p class="muted">まだネタ出しをしていません。</p>')
+    return f"""<h1>過去のネタ出し</h1>
+<div class="btnrow" style="margin:0 0 16px"><a class="btn primary" href="/ideas">ネタ出しへ</a></div>
+<div class="card"><h2>履歴</h2>{table}
+<p class="small muted">材料の本文は保存していません（件数だけ）。</p></div>"""
+
+
+def page_ideas_session(sid: str) -> str:
+    I = _ideas()
+    s = I.get_session(sid)
+    back = f"/ideas/history/{s.get('id')}"
+    cards = "".join(idea_card(dict(c, created=s.get("created")), selectable=False, back=back)
+                    for c in s.get("candidates") or [])
+    raw = ""
+    if s.get("raw"):
+        raw = (f'<div class="card alert"><h2>候補を読み取れませんでした</h2><p>{e(s.get("error") or "")}</p>'
+               f'<p class="small">返ってきた文章をそのまま残しています。もう一度試すときは「ネタ出し」から「ネタを出す」を押してください。</p>'
+               f'<pre class="send">{e(s.get("raw"))}</pre></div>')
+    ex = int(s.get("excluded_rejected") or 0)
+    return f"""<h1>ネタ出し {e(s.get("id"))}</h1>
+<p class="small muted">{e((s.get("created") or "").replace("T", " "))} ／ モデル {e(s.get("model") or "—")} ／
+{e(I.summary_text(s.get("materials_summary") or {}))} ／ 渡した文章 {e(s.get("prompt_chars", 0))}字
+{f" ／ 却下したネタと同じで除外 {ex}件" if ex else ""}</p>
+<div class="btnrow" style="margin:0 0 16px"><a class="btn primary" href="/ideas">ネタ出しへ（選んで調査に回す）</a><a class="btn" href="/ideas/history">履歴へ</a></div>
+{raw}{cards}"""
+
+
+SKILLS_EXAMPLE = """<div class="example"><b>書き方のれい</b>
+<p class="small" style="margin:4px 0">「自分が得意なこと」「今までやってきたこと」を、1行に1つずつ書きます。短くて大丈夫です。</p>
+<ul><li>10年くらい、お店で働いていた</li><li>料理が得意。安い材料でたくさん作れる</li>
+<li>子どものころから本を読むのが好き</li><li>引っ越しを5回した</li><li>家族の世話をしてきた</li></ul>
+<p class="small" style="margin:6px 0 0"><b>本名・会社名・住所など、人に知られたくないことは書かなくて大丈夫です。</b>
+「お店」「会社」「ある町」のように、ぼかして書きましょう。</p></div>"""
+
+
+def page_skills() -> str:
+    I = _ideas()
+    text = I.get_skills()
+    return f"""<h1>得意・経験リスト</h1>
+<p class="muted">ネタ出しのときに Claude に渡す「あなたの得意なこと・経験してきたこと」のメモです。</p>
+<div class="grid"><div class="card"><h2>書く</h2><form method="post" action="/settings/skills">
+<label class="f" for="skills">得意なこと・経験してきたこと（1行に1つ）</label>
+<textarea id="skills" name="skills" class="tall">{e(text)}</textarea>
+<div class="btnrow"><button class="btn primary">保存する</button><a class="btn" href="/ideas">ネタ出しへ</a></div></form>
+<p class="small muted">保存先は作業フォルダ（暗号化フォルダ）の中です。GitHub には上がりません。</p></div>
+<div>{SKILLS_EXAMPLE}
+<div class="note small">ここに書いたことは、「ネタを出す」を押したときに Claude に渡します（渡す前に全文を見せます）。
+Web検索には使わないので、検索として外に出ることはありません。</div></div></div>"""
+
+
+def reaction_form(r: dict, action: str, submit: str) -> str:
+    import datetime as _dt
+    rec = r.get("recorded") or _dt.date.today().isoformat()
+    return f"""<form method="post" action="{e(action)}">
+<label class="f">記事名（公開タイトル）</label><input type="text" name="title" value="{e(r.get("title", ""))}" required>
+<div class="cols"><div><label class="f">公開日</label><input type="date" name="published" value="{e(r.get("published", ""))}"></div>
+<div><label class="f">記録日（数えた日）</label><input type="date" name="recorded" value="{e(rec)}"></div></div>
+<div class="cols"><div><label class="f">スキ数</label><input type="number" name="likes" min="0" inputmode="numeric" value="{e(r.get("likes", 0))}"></div>
+<div><label class="f">コメント数</label><input type="number" name="comments" min="0" inputmode="numeric" value="{e(r.get("comments", 0))}"></div>
+<div><label class="f">購入数</label><input type="number" name="purchases" min="0" inputmode="numeric" value="{e(r.get("purchases", 0))}"></div></div>
+<label class="f">メモ（任意。ネタ出しには渡しません）</label><textarea name="memo" rows="2">{e(r.get("memo", ""))}</textarea>
+<div class="btnrow"><button class="btn primary">{e(submit)}</button></div></form>"""
+
+
+def page_reactions() -> str:
+    Rx = _reactions()
+    titles = []
+    for g in Rx.by_article():
+        rows = []
+        for r in g["records"]:
+            rid = e(r.get("id"))
+            rows.append(f"""<tr id="{rid}"><td class="small">{e(r.get("recorded"))}</td><td class="num">{e(r.get("likes"))}</td>
+<td class="num">{e(r.get("comments"))}</td><td class="num">{e(r.get("purchases"))}</td><td class="small">{lines_html(r.get("memo", ""))}
+<details><summary>編集</summary>{reaction_form(r, "/reactions/" + str(r.get("id")), "保存する")}
+<form method="post" action="/reactions/{rid}/delete" data-confirm="この記録（{rid}）を削除します。よろしいですか？">
+<div class="btnrow"><button class="btn ng sm">この記録を削除</button></div></form></details></td></tr>""")
+        titles.append(f"""<div class="card"><h2>{e(g["title"])}</h2>
+<p class="small muted">公開日 {e(g.get("published") or "—")} ／ 記録 {len(g["records"])}回</p>
+<div class="tablewrap"><table><tr><th>記録日</th><th class="num">スキ</th><th class="num">コメント</th><th class="num">購入</th><th>メモ</th></tr>
+{"".join(rows)}</table></div></div>""")
+    return f"""<h1>反応記録</h1>
+<p class="muted">公開した記事の反応（スキ・コメント・購入）を、数えた日ごとに手で記録します。記事ごと・反応がよかった順に並びます。
+ネタ出しには「反応がよかった順」の<b>タイトルと数だけ</b>を渡します（メモは渡しません）。</p>
+<div class="grid"><div>{"".join(titles) or '<div class="card"><p class="muted">まだ記録がありません。</p></div>'}</div>
+<div><div class="card warm"><h2>記録を追加</h2>{reaction_form({}, "/reactions/new", "追加する")}</div></div></div>"""
+
+
+def ideas_home_card() -> str:
+    try:
+        n = _ideas().counts_by_status().get("未検討", 0)
+    except store.VaultError:
+        raise
+    except Exception:
+        return ""
+    return f"""<div class="card"><h2>ネタ出し</h2>
+<p>未検討のネタ候補 <b>{n}</b> 件</p>
+<div class="btnrow"><a class="btn sm primary" href="/ideas">ネタ出しを開く</a><a class="btn sm" href="/settings/skills">得意・経験リスト</a></div></div>"""
+
+
+GUIDE_IDEAS = """
+<div class="card" id="ideas"><h2>ネタ出しの使い方</h2>
+<p>「何を書こうかな」と思ったときに、Claude に記事のネタの候補を出してもらう機能です。<b>追加料金はかかりません。</b></p>
+<ol class="steps">
+<li><b>得意・経験リストを書く</b>（はじめの1回）<br><a href="/settings/skills">得意・経験リスト</a>に、得意なことや、今までやってきたことを書きます。</li>
+<li><b>「ネタを出す」を押す</b><br><a href="/ideas">ネタ出し</a>の画面のボタンを押します。</li>
+<li><b>渡す文章を確かめる</b><br>Claude に渡す文章が全部表示されます。よければ「OK。ネタを出す」を押します。</li>
+<li><b>候補を見る</b><br>1〜数分で、ネタの候補が10個くらい並びます。</li>
+<li><b>気になるものにチェックを付ける</b><br>いくつ選んでも大丈夫です。</li>
+<li><b>「選んだ候補をトレンド調査に回す」を押す</b><br>リサーチの画面に、選んだネタが文章になって入ります。</li>
+<li><b>文章を直して送る</b><br>そのままでも、書き直してもOKです。送る前に、もう一度確認画面が出ます。</li>
+<li><b>結果を見て、書くかどうか決める</b></li></ol>
+<p>合わないネタは<b>「却下」</b>を押すと、次から出てこなくなります。「保留」は、あとで考えたいときに使います。</p>
+<h3>候補は「仮説」です</h3>
+<p>Claude は、いまの流行をぜんぶ知っているわけではありません。だから候補には「仮説（まだ需要を確かめていない）」と書いてあります。
+本当に読みたい人がいるかは、<b>トレンド調査</b>で確かめます。</p>
+<h3>得意・経験リストの書き方</h3>
+<p>1行に1つ、短く書きます。むずかしい言葉はいりません。</p>
+<ul><li>10年くらい、お店で働いていた</li><li>料理が得意。安い材料でたくさん作れる</li>
+<li>子どものころから本を読むのが好き</li><li>引っ越しを5回した</li></ul>
+<p><b>本名・会社名・住所など、人に知られたくないことは書かなくて大丈夫です。</b>「お店」「ある町」のように、ぼかして書きましょう。
+書いたものは作業フォルダ（暗号化フォルダ）に保存され、GitHub には上がりません。</p>
+<h3>かけらはネタ出しに使いません</h3>
+<p>かけらには、体験したことがくわしく書いてあります。ネタ出しに使うと、その細かい話が候補の文に混ざって、
+トレンド調査のときに外（Web検索）に出てしまうかもしれません。それを防ぐため、かけらは使いません
+（ネタ帳のうち「かけら化済み」のメモも使いません）。</p>
+<h3>Web検索はしません</h3>
+<p>ネタ出しの Claude は、Web検索もほかの道具も使えないようにしてあります。得意・経験リストやネタ帳の中身が、
+検索の言葉として外に出ることはありません（Claude には渡します。渡す前に全文を見せます）。</p>
+<h3>反応記録</h3>
+<p><a href="/reactions">反応記録</a>に、公開した記事のスキ・コメント・購入の数を書いておくと、
+「反応がよかった記事」をヒントにしたネタが出やすくなります（Claude に渡すのはタイトルと数だけです）。</p></div>
+"""
+
+
 # ---------- 使い方 ----------
 
 def page_guide() -> str:
     return f"""<h1>使い方</h1>
-<div class="card"><h2>流れ</h2><ol>
+<div class="card"><h2>流れ</h2>
+<p class="small">記事のネタに迷ったら、<a href="#ideas">ネタ出し</a> → トレンド調査 → 深掘り調査 の順に進めます。</p><ol>
 <li><b>ネタ帳</b>に、思い出したことを1行でもメモします（記事に紐付けなくてOK）。</li>
 <li>ネタを<b>「かけらにする」</b>で、記事・区間・観点（五感・体の反応・セリフ・分岐点など）を付けます。直接<b>かけらを書く</b>こともできます。</li>
 <li><b>記事と充足度</b>で記事ごとに区間を決めると、区間×観点の表で「まだ書けていないところ」（0件の赤い枠）が分かります。</li>
@@ -1354,7 +1656,12 @@ def page_guide() -> str:
 <li><code>./nw kakera add / list / search / show / rm</code>、<code>./nw neta add / list / promote</code>、<code>./nw article add / list</code></li>
 <li><code>./nw coverage 記事名</code>、<code>./nw check 下書き.md ...</code>、<code>./nw rules</code></li>
 <li><code>./nw research run --kind trend|deep [--provider claude|pplx_standard|pplx_deep] [--article 記事] 質問文</code>（送る前に全文を表示し、yes と打ったときだけ送ります）</li>
-<li><code>./nw research list / show / import / usage</code>、<code>./nw research key set / status / delete</code></li></ul></div>
+<li><code>./nw research list / show / import / usage</code>、<code>./nw research key set / status / delete</code></li>
+<li><code>./nw ideas run [--show-prompt]</code>（渡す文章の文字数と材料の件数を表示し、yes と打ったときだけネタを出します）、
+<code>./nw ideas list [--status 未検討]</code>、<code>./nw ideas set 候補ID 却下|保留|未検討|調査に回した</code>、
+<code>./nw ideas to-research 候補ID ...</code>（トレンド調査の質問文を表示するだけ）</li>
+<li><code>./nw skills show / edit</code>、<code>./nw reaction add / list</code></li></ul></div>
+<h1 style="margin-top:28px">ネタ出し</h1>{GUIDE_IDEAS}
 <h1 style="margin-top:28px">リサーチ</h1>{GUIDE_RESEARCH}
 <h1 style="margin-top:28px">初回のお知らせ（再掲）</h1>{NOTICE_BODY}"""
 
@@ -1544,6 +1851,22 @@ class Handler(BaseHTTPRequestHandler):
                 page, title, active = page_research_usage(qs), "リサーチの使用額", "research"
             elif path == "/settings/api-key":
                 page, title, active = page_api_key(), "APIキー", "research"
+            elif path == "/ideas":
+                page, title, active = page_ideas(qs), "ネタ出し", "ideas"
+            elif path == "/ideas/confirm":
+                self._redirect_to("/ideas")
+                return
+            elif path == "/ideas/history":
+                page, title, active = page_ideas_history(), "過去のネタ出し", "ideas"
+            elif m := re.fullmatch(r"/ideas/history/(I\d+)", path):
+                page, title, active = page_ideas_session(m[1]), f"ネタ出し {m[1]}", "ideas"
+            elif m := re.fullmatch(r"/ideas/jobs/(IJ\d+)", path):
+                page, head = page_ideas_job(_ideas().get_job(m[1]))
+                title, active = "ネタ出しの実行", "ideas"
+            elif path == "/settings/skills":
+                page, title, active = page_skills(), "得意・経験リスト", "ideas"
+            elif path == "/reactions":
+                page, title, active = page_reactions(), "反応記録", "reactions"
             if page is None:
                 self._page("見つかりません", "<h1>見つかりません</h1>", status=404)
             else:
@@ -1620,12 +1943,21 @@ class Handler(BaseHTTPRequestHandler):
             return "/research"
         if path.startswith("/settings/api-key"):
             return "/settings/api-key"
+        if path.startswith("/settings/skills"):
+            return "/settings/skills"
+        if path.startswith("/ideas"):
+            return "/ideas"
+        if path.startswith("/reactions"):
+            return "/reactions"
         return "/"
 
     def _post(self, path: str, form: Form, vdir: Path) -> None:
         K = _kakera()
         if path == "/check":
             self._post_check(form, vdir)
+            return
+        if path.startswith("/ideas") or path.startswith("/reactions") or path == "/settings/skills":
+            self._post_ideas(path, form)
             return
         if path.startswith("/research") or path.startswith("/settings/"):
             self._post_research(path, form)
@@ -1724,6 +2056,57 @@ class Handler(BaseHTTPRequestHandler):
         result = page_check_result(docs)
         self._page("チェック結果", page_check(vdir, result, pasted, paste_name, selected), "check")
 
+
+    def _post_ideas(self, path: str, form: Form) -> None:
+        I, Rx = _ideas(), _reactions()
+        back = form.get("back")
+        if not back.startswith("/ideas") or back.startswith("//"):
+            back = "/ideas"
+        back = quote(back.partition("#")[0], safe="/?=&%")
+        if path == "/ideas/confirm":  # まだ渡さない。渡す全文を見せる
+            self._page("ネタ出し: 渡す前の確認", page_ideas_confirm(I.prepare()), "ideas")
+        elif path == "/ideas/run":
+            try:
+                jid = I.start_job(form.get("confirm_token"))
+            except I.ConfirmMismatch as ex:
+                self._redirect_to("/ideas", f"エラー: {ex}", error=True)
+                return
+            self._redirect_to(f"/ideas/jobs/{quote(str(jid), safe='')}", "Claude に渡しました。候補が出るまでお待ちください")
+        elif path == "/ideas/status":
+            cid, _, status = form.get("set").partition("|")
+            if not cid:
+                cid, status = form.get("cid"), form.get("status")
+            c = I.set_status(cid, status)
+            self._redirect_to(back + "#" + quote(c["cid"], safe=""), f"{c['cid']} を「{status}」にしました")
+        elif path == "/ideas/to-research":
+            cids = form.list("cids")
+            if not cids:
+                raise ValueError("トレンド調査に回す候補を、チェックを付けて選んでください。")
+            query = I.research_query(cids)
+            I.set_statuses(cids, "調査に回した")
+            self._research_form_page({"kind": "trend", "provider": "", "article": "", "query": query},
+                                     f"選んだ候補 {len(cids)} 件を「調査に回した」にしました。"
+                                     "質問文を確かめて（書き直してもOK）、確認画面へ進んでください")
+        elif path == "/settings/skills":
+            I.save_skills(form.get("skills", strip=False))
+            self._redirect_to("/settings/skills", "得意・経験リストを保存しました")
+        elif path == "/reactions/new":
+            r = Rx.add_reaction(**self._reaction_fields(form))
+            self._redirect_to(f"/reactions#{quote(r['id'], safe='')}", f"「{r['title']}」の反応を記録しました")
+        elif m := re.fullmatch(r"/reactions/(R\d+)/delete", path):
+            Rx.delete_reaction(m[1])
+            self._redirect_to("/reactions", f"記録 {m[1]} を削除しました")
+        elif m := re.fullmatch(r"/reactions/(R\d+)", path):
+            r = Rx.update_reaction(m[1], **self._reaction_fields(form))
+            self._redirect_to(f"/reactions#{quote(r['id'], safe='')}", "保存しました")
+        else:
+            self._send("not found", 404)
+
+    @staticmethod
+    def _reaction_fields(form: Form) -> dict:
+        return {"title": form.get("title"), "published": form.get("published"), "recorded": form.get("recorded"),
+                "likes": form.get("likes"), "comments": form.get("comments"), "purchases": form.get("purchases"),
+                "memo": form.get("memo", strip=False)}
 
     def _research_form_page(self, vals: dict, flash: str = "", error: bool = False, status: int = 200) -> None:
         """入力画面を、値を入れたまま表示する（書き直す・エラー時。何も保存しない）。"""
