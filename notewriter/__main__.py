@@ -8,6 +8,14 @@
   ./nw coverage 記事名
   ./nw check 下書き.md ... [--json]            警告を出すだけ（本文は変更しない）。指摘があれば終了コード1
   ./nw rules                                  ルールファイルの場所と検証結果
+  ./nw research run --kind trend|deep [--provider P] [--article A] [質問文]
+                                              送る全文・警告・費用の目安を表示し、yes と打ったときだけ送る
+  ./nw research list|show|import|usage ...    リサーチ資料と今月の使用額
+  ./nw research key set|status|delete         Perplexity のAPIキー（set は画面に出さずに入力）
+  ./nw ideas run [--show-prompt]              ネタ出し（渡す文章の文字数と材料の件数を表示し、yes で実行）
+  ./nw ideas list [--status 未検討]|set CID 状態|to-research CID...
+  ./nw skills show|edit                       得意・経験リスト（edit は $EDITOR か標準入力）
+  ./nw reaction add|list                      反応記録（スキ・コメント・購入の数を手で記録）
 
 作業フォルダが使えない（未初期化・未マウント）ときは終了コード2。check と rules は作業フォルダなしでも動く。
 """
@@ -282,10 +290,378 @@ def cmd_rules(args) -> None:
     print("OK")
 
 
+# ---------- リサーチ ----------
+
+def _research():
+    from . import research
+    return research
+
+
+def _secrets():
+    from . import secrets as nw_secrets
+    return nw_secrets
+
+
+def _safe(text) -> str:
+    """エラーなどを出す前に、APIキーらしき文字列を伏せる。"""
+    s = "" if text is None else str(text)
+    try:
+        s = _secrets().redact(s)
+    except Exception:
+        pass
+    import re
+    return re.sub(r"pplx-[A-Za-z0-9_\-]{6,}", "pplx-****", s)
+
+
+def _yen(v) -> str:
+    try:
+        n = float(v or 0)
+    except (TypeError, ValueError):
+        return "—"
+    if 0 < n < 1:
+        return "1円未満"
+    return f"{int(round(n)):,}円"
+
+
+def _est_text(est) -> str:
+    if isinstance(est, (int, float)):
+        return f"だいたい {_yen(est)}"
+    if not isinstance(est, dict) or not est.get("paid"):
+        return "追加料金なし"
+    lo, hi = _yen(est.get("jpy_low")), _yen(est.get("jpy_high"))
+    return f"だいたい {hi}" if lo == hi else f"だいたい {lo}〜{hi}"
+
+
+def _ask_yes(question: str, tty_only: bool) -> bool:
+    """yes と打ったときだけ True。tty_only なら /dev/tty から読む（開けなければ中止）。"""
+    if tty_only:
+        try:
+            tty_in = open("/dev/tty", "r", encoding="utf-8")
+            tty_out = open("/dev/tty", "w", encoding="utf-8")
+        except OSError:
+            print("端末（/dev/tty）が開けないため、確認できません。送らずに終了します。", file=sys.stderr)
+            return False
+        with tty_in, tty_out:
+            tty_out.write(question)
+            tty_out.flush()
+            answer = tty_in.readline()
+    else:
+        try:
+            answer = input(question)
+        except EOFError:
+            answer = ""
+    return answer.strip().lower() == "yes"
+
+
+def cmd_research_run(args) -> None:
+    R, S = _research(), _secrets()
+    if args.query:
+        if not sys.stdin.isatty():
+            sys.exit("標準入力が端末ではないため、実行しません（有料の操作を自動化しないため）。端末から実行してください。")
+        query, from_stdin = " ".join(args.query), False
+    else:
+        if sys.stdin.isatty():
+            sys.exit("質問文を引数で渡すか、標準入力から流し込んでください。")
+        query, from_stdin = sys.stdin.read(), True
+    if not query.strip():
+        sys.exit("質問文が空です。")
+    provider = args.provider or R.load_config().get("default_provider") or "claude"
+    if args.kind == "deep" and not args.article:
+        sys.exit("深掘り調査は --article で記事を指定してください。")
+    if R.is_paid(provider) and not S.has_api_key():
+        sys.exit("Perplexity のAPIキーが未登録です。./nw research key set で登録してください。")
+    p = R.prepare(args.kind, provider, query, article=args.article)
+    print(f"種類: {R.KINDS.get(p['kind'], p['kind'])}")
+    print(f"送り先: {p.get('provider_label') or R.provider_label(provider)}")
+    print(f"記事: {p.get('article') or '記事なし'}")
+    print("\n===== 外に送る文章（これが全文です） =====")
+    print(p["prompt"])
+    print("===== ここまで =====\n")
+    warns = p.get("warnings") or []
+    if warns:
+        print(f"気をつける語が {len(warns)} 件あります（止めるかどうかはあなたが決めます）:")
+        for w in warns:
+            line = f"{w.get('line')}行目 " if w.get("line") else ""
+            print(f"  - {line}[{w.get('category')}] 「{w.get('match')}」 {w.get('message')}")
+        print()
+    usage = R.month_usage()
+    if R.is_paid(provider):
+        est = p.get("estimate") or {}
+        print(f"費用: {_est_text(est)}（目安）")
+        if est.get("pricing_note"):
+            print(f"      {est['pricing_note']}")
+        after = (usage.get("total_jpy") or 0) + (est.get("jpy_high") or 0)
+        print(f"今月の使用額: {_yen(usage.get('total_jpy'))} ／ 上限 {_yen(usage.get('budget_jpy'))}"
+              f"（実行後の見込み 最大 {_yen(after)}）")
+    else:
+        print("費用: 追加料金なし（Claude の契約の利用枠を使います）")
+    if not p.get("budget_ok", True):
+        print(f"送れません: {_safe(p.get('budget_message'))}", file=sys.stderr)
+        sys.exit(1)
+    if not _ask_yes("この内容で送りますか？ 送るなら yes と入力: ", tty_only=from_stdin):
+        print("送りませんでした。")
+        sys.exit(1)
+    print("調べています（数分かかることがあります）…", flush=True)
+    try:
+        job = R.run_job(p["kind"], provider, p.get("query", query), p.get("article", args.article), p["confirm_token"])
+    except R.BudgetExceeded as ex:
+        print(f"送りませんでした: {_safe(ex)}", file=sys.stderr)
+        sys.exit(1)
+    status = job.get("status")
+    if status == "done":
+        print(f"完了しました。リサーチ資料 {job.get('material_id')} に保存しました（./nw research show {job.get('material_id')}）。")
+    elif status == "limit":
+        pe = job.get("estimate_jpy_for_pplx")
+        if not pe:
+            pe = R.estimate("pplx_standard", p["kind"])
+        resets = job.get("limit_resets_at")
+        print(f"Claude の利用上限に達しました{'（' + str(resets).replace('T', ' ') + 'ごろ解除）' if resets else ''}。"
+              f"Perplexity で続けますか？（目安{_est_text(pe).replace('だいたい ', '')}）")
+        print("続けるときは、--provider pplx_standard を付けて改めて実行してください（自動では続けません）。")
+        sys.exit(3)
+    else:
+        print(f"うまくいきませんでした: {_safe(job.get('error') or '理由は分かりませんでした')}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _provider_name(key) -> str:
+    try:
+        return _research().provider_label(key) if key in _research().PROVIDER_KEYS else (key or "—")
+    except Exception:
+        return key or "—"
+
+
+def cmd_research_list(args) -> None:
+    items = sorted(_research().list_materials(args.article or None),
+                   key=lambda m: (m.get("researched_at") or "", m.get("id") or ""), reverse=True)
+    if not items:
+        print("（リサーチ資料はありません）")
+        return
+    rows = [[str(m.get("id")), m.get("researched_at") or "—", ("1年以上前" if m.get("stale") else ""),
+             m.get("provider_label") or _provider_name(m.get("provider")), m.get("model") or "—", m.get("article") or "—",
+             str(len(m.get("sources") or [])), _one_line(m.get("title") or m.get("query") or "", 30)] for m in items]
+    print(_table(["ID", "調べた日", "古さ", "担当", "モデル", "記事", "出典", "題"], rows))
+    print(f"\n{len(items)} 件")
+
+
+def cmd_research_show(args) -> None:
+    m = _research().get_material(args.id)
+    for key, label in (("id", "ID"), ("title", "題"), ("article", "記事"), ("kind", "種類"), ("model", "モデル"),
+                       ("researched_at", "調べた日"), ("origin", "取り込み")):
+        print(f"{label}: {m.get(key) or '—'}")
+    print(f"担当: {m.get('provider_label') or _provider_name(m.get('provider'))}")
+    if m.get("cost_jpy") not in (None, ""):
+        print(f"費用: {_yen(m.get('cost_jpy'))}")
+    if m.get("stale"):
+        print(f"注意: 1年以上前の資料です（{m.get('age_days')}日前）。使う前に最新の情報で確認し直してください。")
+    print("注意: 体験談の記事では、書き方・背景の参考にとどめます。本文に新しい事実として混ぜないでください。")
+    srcs = m.get("sources") or []
+    print(f"出典: {len(srcs)} 件")
+    for s in srcs:
+        print(f"  - {s.get('title') or ''} {s.get('url') or ''} {s.get('date') or ''}".rstrip())
+    print("---")
+    print(m.get("body", ""))
+
+
+def cmd_research_import(args) -> None:
+    R = _research()
+    if args.date:
+        from datetime import datetime
+        try:
+            datetime.strptime(args.date, "%Y-%m-%d")
+        except ValueError:
+            sys.exit("--date は YYYY-MM-DD の形で指定してください。")
+    for f in args.files:
+        try:
+            text = Path(f).read_text(encoding="utf-8-sig")
+        except (OSError, UnicodeDecodeError) as ex:
+            print(f"読めません: {f}: {ex}", file=sys.stderr)
+            sys.exit(2)
+        m = R.import_material(Path(f).name, text.replace("\r\n", "\n").replace("\r", "\n"), article=args.article,
+                              researched_at=args.date or None)
+        print(f"{f} → リサーチ資料 {m.get('id')} として取り込みました")
+
+
+def cmd_research_usage(args) -> None:
+    u = _research().month_usage(args.month or None)
+    runs = u.get("runs") or []
+    if runs:
+        rows = [[(r.get("at") or "").replace("T", " "), _provider_name(r.get("provider")), r.get("model") or "—",
+                 r.get("kind") or "—", "不明" if r.get("cost_unknown") else _yen(r.get("cost_jpy")),
+                 r.get("cost_source") or "—"] for r in runs]
+        print(_table(["日時", "担当", "モデル", "種類", "金額", "算出"], rows, right_from=4))
+        print()
+    else:
+        print("（この月の実行はありません）")
+    print(f"{u.get('month')} の使用額: {_yen(u.get('total_jpy'))} ／ 上限 {_yen(u.get('budget_jpy'))}"
+          f"（残り {_yen(u.get('remaining_jpy'))}）")
+    if u.get("unknown_count"):
+        print(f"金額不明の実行: {u['unknown_count']} 件（目安 最大 {_yen(u.get('unknown_estimated_jpy'))} として上限に数えています）")
+    print("上限は config/research.json（作業フォルダ側で上書き可）の monthly_budget_jpy で変えられます。")
+
+
+def cmd_research_key_set(args) -> None:
+    import getpass
+    key = getpass.getpass("Perplexity のAPIキー（入力しても表示されません）: ")
+    try:
+        warns = _secrets().set_api_key(key)
+    finally:
+        key = ""
+    print("APIキーを登録しました。")
+    for w in warns:
+        print(f"注意: {_safe(w)}")
+
+
+def cmd_research_key_status(args) -> None:
+    src = _secrets().api_key_source()
+    print({"file": "登録済み", "env": "登録済み（環境変数で設定済み）"}.get(src, "未登録"))
+
+
+def cmd_research_key_delete(args) -> None:
+    print("APIキーを削除しました。" if _secrets().delete_api_key() else "削除するキーはありませんでした。")
+
+
+# ---------- ネタ出し ----------
+
+def _ideas():
+    from . import ideas
+    return ideas
+
+
+def _print_candidates(items) -> None:
+    I = _ideas()
+    if not items:
+        print("（該当する候補はありません）")
+        return
+    for c in items:
+        print(f"[{c.get('cid')}] {c.get('status')} ／ {c.get('type')} ／ {I.HYPOTHESIS}")
+        print(f"  ネタ: {c.get('idea')}")
+        print(f"  なぜ私に向いているか: {c.get('why_me') or '—'}"
+              + (f"（{', '.join(c.get('skills') or [])}）" if c.get("skills") else ""))
+        print(f"  想定する読者: {c.get('reader') or '—'}")
+        for pt in c.get("check_points") or []:
+            print(f"  確かめる点: {pt}")
+    print(f"\n{len(items)} 件")
+
+
+def cmd_ideas_run(args) -> None:
+    I = _ideas()
+    p = I.prepare()
+    if args.show_prompt:
+        print("===== Claude に渡す文章（これが全文です） =====")
+        print(p["prompt"])
+        print("===== ここまで =====\n")
+    print(f"Claude に渡す文章: {p['chars']}字（全文は --show-prompt で表示）")
+    print(f"材料: {I.summary_text(p['summary'])}")
+    print("かけら（体験談の素材）は入れていません。ツールなし・Web検索なし・追加料金なしで実行します。")
+    print("候補をトレンド調査に回すときは、送る前にもう一度確認します。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+    print("ネタを考えています（1〜数分かかることがあります）…", flush=True)
+    job = I.run_job(p["confirm_token"])
+    status = job.get("status")
+    if status == "done":
+        print(f"候補を {job.get('count', 0)} 件出しました（{job.get('session_id')}）。")
+        if job.get("excluded_rejected"):
+            print(f"却下したネタと同じ候補 {job['excluded_rejected']} 件は外しました。")
+        print()
+        _print_candidates([c for c in I.list_candidates() if c.get("session_id") == job.get("session_id")])
+    elif status == "limit":
+        print(_safe(job.get("error") or I.limit_message()), file=sys.stderr)
+        sys.exit(3)
+    else:
+        print(f"うまくいきませんでした: {_safe(job.get('error') or '理由は分かりませんでした')}", file=sys.stderr)
+        sys.exit(1)
+
+
+def cmd_ideas_list(args) -> None:
+    _print_candidates(_ideas().list_candidates(args.status or None))
+
+
+def cmd_ideas_set(args) -> None:
+    c = _ideas().set_status(args.cid, args.status)
+    print(f"{c['cid']} を「{c['status']}」にしました")
+
+
+def cmd_ideas_to_research(args) -> None:
+    print(_ideas().research_query(args.cids))
+    print("\n（表示しただけです。調べるときは、この文章を直してから ./nw research run --kind trend で送ってください）",
+          file=sys.stderr)
+
+
+def cmd_skills_show(args) -> None:
+    text = _ideas().get_skills()
+    print(text if text else "（まだ書いていません。./nw skills edit で書けます）")
+
+
+def cmd_skills_edit(args) -> None:
+    import subprocess
+    import tempfile
+    I = _ideas()
+    editor = os.environ.get("VISUAL") or os.environ.get("EDITOR")
+    if editor and sys.stdin.isatty():
+        import shlex
+        d = store.vault() / "profile"  # 一時ファイルも作業フォルダ（暗号化境界）の内側に作る
+        d.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(prefix=".skills-edit-", suffix=".md", dir=str(d))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(I.get_skills() + "\n")
+            if subprocess.call(shlex.split(editor) + [tmp]) != 0:
+                sys.exit("エディタが正常に終わらなかったため、保存しませんでした。")
+            text = Path(tmp).read_text(encoding="utf-8")
+        finally:
+            try:
+                os.unlink(tmp)
+            except FileNotFoundError:
+                pass
+    else:
+        if sys.stdin.isatty():
+            sys.exit("$EDITOR を設定するか、標準入力から流し込んでください（例: ./nw skills edit < skills.txt）。")
+        text = sys.stdin.read()
+    I.save_skills(text)
+    print(f"得意・経験リストを保存しました（{len(text.strip())}字）")
+
+
+def _reactions():
+    from . import reactions
+    return reactions
+
+
+def cmd_reaction_add(args) -> None:
+    r = _reactions().add_reaction(args.title, published=args.published, recorded=args.recorded, likes=args.likes,
+                                  comments=args.comments, purchases=args.purchases, memo=args.memo)
+    print(f"反応を記録しました（{r['id']}）: 「{r['title']}」 スキ {r['likes']}・コメント {r['comments']}・購入 {r['purchases']}")
+
+
+def cmd_reaction_list(args) -> None:
+    groups = _reactions().by_article()
+    if not groups:
+        print("（反応記録はまだありません）")
+        return
+    rows = []
+    for g in groups:
+        for r in g["records"]:
+            rows.append([r.get("id", ""), _one_line(g["title"], 30), r.get("published") or "—", r.get("recorded") or "—",
+                         str(r.get("likes", 0)), str(r.get("comments", 0)), str(r.get("purchases", 0)),
+                         _one_line(r.get("memo") or "", 20)])
+    print(_table(["ID", "記事", "公開日", "記録日", "スキ", "コメント", "購入", "メモ"], rows, right_from=4))
+    print("\n記事ごと・反応がよかった順（最新の記録の 購入→スキ→コメント）")
+
+
 # ---------- 引数 ----------
 
+class _Parser(argparse.ArgumentParser):
+    """引数の誤りを表示するときも、APIキーらしき文字列は伏せる（例: key set の後ろにキーを書いてしまったとき）。"""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        self.exit(2, _safe(f"{self.prog}: エラー: {message}") + "\n")
+
+
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="nw", description="notewriter: かけら管理とコンプライアンスチェッカー")
+    p = _Parser(prog="nw", description="notewriter: かけら管理とコンプライアンスチェッカー")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("init", help="作業フォルダと目印を作る").set_defaults(func=cmd_init)
@@ -354,6 +730,64 @@ def build_parser() -> argparse.ArgumentParser:
     a.set_defaults(func=cmd_check)
 
     sub.add_parser("rules", help="ルールファイルの場所と検証結果").set_defaults(func=cmd_rules)
+
+    r = sub.add_parser("research", help="リサーチ").add_subparsers(dest="sub", required=True)
+    a = r.add_parser("run", help="調べる（送る全文を表示し、yes と打ったときだけ送る）")
+    a.add_argument("query", nargs="*", help="質問文（省略すると標準入力から読む）")
+    a.add_argument("--kind", required=True, choices=("trend", "deep"))
+    a.add_argument("--provider", choices=("claude", "pplx_standard", "pplx_deep"), default=None,
+                   help="担当（省略すると設定の default_provider）")
+    a.add_argument("--article", default="")
+    a.set_defaults(func=cmd_research_run)
+    a = r.add_parser("list", help="リサーチ資料の一覧")
+    a.add_argument("--article", default="")
+    a.set_defaults(func=cmd_research_list)
+    a = r.add_parser("show", help="リサーチ資料を1件表示")
+    a.add_argument("id")
+    a.set_defaults(func=cmd_research_show)
+    a = r.add_parser("import", help="Markdown を手動で取り込む")
+    a.add_argument("files", nargs="+")
+    a.add_argument("--article", default="")
+    a.add_argument("--date", default="", help="調べた日（YYYY-MM-DD。省略すると今日）")
+    a.set_defaults(func=cmd_research_import)
+    a = r.add_parser("usage", help="今月の使用額")
+    a.add_argument("--month", default="", help="YYYY-MM")
+    a.set_defaults(func=cmd_research_usage)
+    kk = r.add_parser("key", help="Perplexity のAPIキー").add_subparsers(dest="keycmd", required=True)
+    kk.add_parser("set", help="登録（画面に出さずに入力）").set_defaults(func=cmd_research_key_set)
+    kk.add_parser("status", help="登録済みか").set_defaults(func=cmd_research_key_status)
+    kk.add_parser("delete", help="登録したキーを削除").set_defaults(func=cmd_research_key_delete)
+
+    i = sub.add_parser("ideas", help="ネタ出し").add_subparsers(dest="sub", required=True)
+    a = i.add_parser("run", help="ネタを出す（渡す文章の文字数と材料の件数を表示し、yes と打ったときだけ実行）")
+    a.add_argument("--show-prompt", action="store_true", help="Claude に渡す全文を表示する")
+    a.set_defaults(func=cmd_ideas_run)
+    a = i.add_parser("list", help="候補の一覧")
+    a.add_argument("--status", choices=("未検討", "調査に回した", "保留", "却下"), default=None)
+    a.set_defaults(func=cmd_ideas_list)
+    a = i.add_parser("set", help="候補の状態を変える")
+    a.add_argument("cid")
+    a.add_argument("status", choices=("未検討", "調査に回した", "保留", "却下"))
+    a.set_defaults(func=cmd_ideas_set)
+    a = i.add_parser("to-research", help="選んだ候補から、トレンド調査の質問文を作って表示する（実行はしない）")
+    a.add_argument("cids", nargs="+")
+    a.set_defaults(func=cmd_ideas_to_research)
+
+    sk = sub.add_parser("skills", help="得意・経験リスト").add_subparsers(dest="sub", required=True)
+    sk.add_parser("show", help="表示").set_defaults(func=cmd_skills_show)
+    sk.add_parser("edit", help="書く（$EDITOR か標準入力）").set_defaults(func=cmd_skills_edit)
+
+    rx = sub.add_parser("reaction", help="反応記録").add_subparsers(dest="sub", required=True)
+    a = rx.add_parser("add", help="反応を記録する")
+    a.add_argument("title", help="記事名（公開タイトル）")
+    a.add_argument("--published", default="", help="公開日 YYYY-MM-DD")
+    a.add_argument("--recorded", default="", help="記録日 YYYY-MM-DD（省略すると今日）")
+    a.add_argument("--likes", type=int, default=0, help="スキ数")
+    a.add_argument("--comments", type=int, default=0, help="コメント数")
+    a.add_argument("--purchases", type=int, default=0, help="購入数")
+    a.add_argument("--memo", default="")
+    a.set_defaults(func=cmd_reaction_add)
+    rx.add_parser("list", help="記事ごとの一覧").set_defaults(func=cmd_reaction_list)
     return p
 
 
@@ -365,10 +799,18 @@ def main(argv=None) -> None:
         print(f"作業フォルダが使えません: {ex}", file=sys.stderr)
         sys.exit(2)
     except KeyError as ex:
-        print(f"見つかりません: {ex.args[0] if ex.args else ex}", file=sys.stderr)
+        print(_safe(f"見つかりません: {ex.args[0] if ex.args else ex}"), file=sys.stderr)
         sys.exit(1)
     except ValueError as ex:
-        print(f"エラー: {ex}", file=sys.stderr)
+        print(_safe(f"エラー: {ex}"), file=sys.stderr)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\n中止しました。", file=sys.stderr)
+        sys.exit(130)
+    except Exception as ex:  # リサーチは外部とやり取りするので、トレースバックではなく伏せ字済みの理由だけ出す
+        if getattr(args, "cmd", "") not in ("research", "ideas"):
+            raise
+        print(_safe(f"エラー（{type(ex).__name__}）: {ex}"), file=sys.stderr)
         sys.exit(1)
     except BrokenPipeError:  # ./nw kakera list | head など
         os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())

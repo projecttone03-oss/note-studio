@@ -76,7 +76,20 @@ NW_DATA_DIR=~/nw-data ./nw serve --host 100.x.y.z   # 画面（既定 127.0.0.1:
 ./nw coverage 前編              # 区間×観点（五感・体の反応・セリフ・分岐点・感情）の充足度
 ./nw check 前編.md 後編.md      # 禁句・助言表現・属性・属性の集中・出典/年度・シリーズ内の矛盾
 ./nw rules                     # ルールファイルの場所と検証
+./nw ideas run|list|set|to-research   # ネタ出し（Claude・ツールなし・追加料金なし。候補は「仮説」）
+./nw research run --kind trend|deep --provider claude|pplx_standard|pplx_deep   # リサーチ（送る前に yes で確認）
+./nw research list|show|import|usage|key set   # 資料・今月の費用・Perplexity の APIキー
+./nw skills show|edit          # 得意・経験リスト（作業フォルダに保存）
+./nw reaction add|list         # 反応記録（手入力）
 ```
+
+流れ: ネタ出し（Claude、Web検索なし）→ 候補を選ぶ（人）→ トレンド調査（Claude／Perplexity）→ 深掘り調査。
+- 外に送る文章は、送る前に全文を表示し、ぼかすべき語があれば警告する。かけらはネタ出し・リサーチに使わない。
+- Perplexity は実行前に費用の目安を表示し、人が OK したときだけ実行。月の上限（`config/research.json` の `monthly_budget_jpy`）を超えると止まる。
+  Claude が利用上限に達しても自動で Perplexity に切り替えない。
+- Claude は別セッションで起動し、ツール制限（許可リスト・拒否リスト・Hook・起動時のツール一覧の確認）を重ねている。
+  リサーチは WebSearch/WebFetch のみ、ネタ出しはツールなし。`--bare` は使わない。
+- APIキーは作業フォルダの `secrets/`（権限 600）か環境変数 `PERPLEXITY_API_KEY`。画面・ログ・エラーには出さない。
 
 - かけら・ネタ帳・下書き・来歴は作業フォルダにだけ保存し、`.gitignore` で除外している（リポジトリに入らない）。
 - 作業フォルダに目印 `.nw-vault` がないと読み書きを拒否する（暗号化フォルダが未マウントのまま平文に書くのを防ぐ）。

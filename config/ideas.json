@@ -1,0 +1,33 @@
+{
+  "_説明": [
+    "ネタ出し機能の設定。作業フォルダの config/ideas.json があれば、キー単位で上書きする。",
+    "ネタ出しは Claude Code（サブスク認証）をツールなし・Web検索なしで動かす。材料は標準入力で渡す。",
+    "かけら（体験談の素材）は材料に含めない（ネタ帳のうち、かけら化済みのメモも含めない）。"
+  ],
+  "command": "claude",
+  "model": "",
+  "max_turns": 2,
+  "timeout_sec": 300,
+  "candidate_count": 10,
+  "skills_max_chars": 4000,
+  "neta_max_items": 30,
+  "neta_max_chars": 200,
+  "past_max_items": 60,
+  "rejected_max_items": 100,
+  "reactions_top": 10,
+  "limit_patterns": [
+    "(?i)usage limit",
+    "(?i)rate limit",
+    "(?i)\\blimit (?:reached|exceeded)",
+    "(?i)reached your .*limit",
+    "(?i)out of (?:extra )?usage",
+    "(?i)resets? (?:at|in)",
+    "上限"
+  ],
+  "disallowed_tools": [
+    "WebSearch", "WebFetch",
+    "Bash", "BashOutput", "KillShell", "Edit", "MultiEdit", "Write", "Read", "Glob", "Grep", "LS",
+    "NotebookEdit", "NotebookRead", "Task", "Agent", "Skill", "SlashCommand", "TodoWrite",
+    "ExitPlanMode", "EnterPlanMode", "EnterWorktree", "ExitWorktree", "Monitor", "mcp__*"
+  ]
+}
