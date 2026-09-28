@@ -1,0 +1,79 @@
+{
+  "_説明": [
+    "リサーチ機能の設定。作業フォルダの config/research.json があれば、キー単位で上書きする（providers はプロバイダごとに項目単位で上書き）。",
+    "APIキーはここに書かない（作業フォルダの secrets/ に本人だけが読める権限で保存する。./nw の画面・CLIから登録）。"
+  ],
+  "_note": "料金・仕様は要確認（https://docs.perplexity.ai/docs/getting-started/pricing）。ここの単価は目安の計算に使うだけで、実際の請求は Perplexity 側の金額が正。",
+  "default_provider": "claude",
+  "usd_jpy": 150,
+  "_usd_jpy_note": "目安。実際のカード請求額とは異なる（為替・手数料で変わる）。",
+  "monthly_budget_jpy": 1000,
+  "estimate_safety_factor": 2.0,
+  "_estimate_safety_factor_note": "月の上限チェックは「今月の合計 ＋ 目安の上限 × この係数」で行う。",
+  "freshness_days": 365,
+  "providers": {
+    "claude": {
+      "label": "Claude（追加料金なし）",
+      "type": "claude",
+      "command": "claude",
+      "model": "",
+      "max_turns": {"trend": 15, "deep": 30},
+      "timeout_sec": 900,
+      "limit_patterns": [
+        "(?i)usage limit",
+        "(?i)rate limit",
+        "(?i)\\blimit (?:reached|exceeded)",
+        "(?i)reached your .*limit",
+        "(?i)out of (?:extra )?usage",
+        "(?i)resets? (?:at|in)",
+        "上限"
+      ],
+      "disallowed_tools": [
+        "Bash", "BashOutput", "KillShell", "Edit", "MultiEdit", "Write", "Read", "Glob", "Grep", "LS",
+        "NotebookEdit", "NotebookRead", "Task", "Agent", "Skill", "SlashCommand", "TodoWrite",
+        "ExitPlanMode", "EnterPlanMode", "EnterWorktree", "ExitWorktree", "Monitor", "mcp__*"
+      ]
+    },
+    "pplx_standard": {
+      "label": "Perplexity ふつう",
+      "type": "perplexity",
+      "model": "sonar-pro",
+      "endpoint": "https://api.perplexity.ai/chat/completions",
+      "timeout_sec": 180,
+      "search_context_size": "medium",
+      "pricing": {
+        "_note": "USD。sonar-pro のリクエスト料金は $6〜$22 の範囲とされ、medium は仮置き（要確認）。",
+        "input_per_m": 3,
+        "output_per_m": 15,
+        "request_per_k": {"low": 6, "medium": 10, "high": 14}
+      },
+      "estimate": {
+        "trend": {"input_tokens": [600, 1500], "output_tokens": [1500, 5000]},
+        "deep": {"input_tokens": [600, 1500], "output_tokens": [2500, 8000]}
+      }
+    },
+    "pplx_deep": {
+      "label": "Perplexity 徹底調査",
+      "type": "perplexity",
+      "model": "sonar-deep-research",
+      "endpoint": "https://api.perplexity.ai/chat/completions",
+      "timeout_sec": 1200,
+      "search_context_size": "",
+      "pricing": {
+        "_note": "USD。Deep Research は入出力のほか引用トークン・検索回数・推論トークンにも課金（要確認）。実例 total_cost ≈ $0.82。",
+        "input_per_m": 2,
+        "output_per_m": 8,
+        "citation_per_m": 2,
+        "reasoning_per_m": 3,
+        "search_query_per_k": 5,
+        "request_per_k": {}
+      },
+      "estimate": {
+        "trend": {"input_tokens": [600, 1500], "output_tokens": [4000, 12000], "citation_tokens": [20000, 80000],
+                  "search_queries": [15, 40], "reasoning_tokens": [50000, 250000]},
+        "deep": {"input_tokens": [600, 1500], "output_tokens": [5000, 15000], "citation_tokens": [30000, 100000],
+                 "search_queries": [20, 50], "reasoning_tokens": [80000, 300000]}
+      }
+    }
+  }
+}

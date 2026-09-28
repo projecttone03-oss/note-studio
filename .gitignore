@@ -38,3 +38,6 @@ config/*.local.yaml
 *.age
 *.gpg
 exports/
+# APIキー（notewriter のリサーチ機能。作業フォルダの secrets/ に置くが、念のため）
+secrets/
+*.key
