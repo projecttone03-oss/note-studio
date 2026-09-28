@@ -14,6 +14,9 @@ note で有料記事（情報整理型）を売るためのローカルツール
 | 5. 公開準備 | — | | 未実装 |
 | 6. 分析・改善 | — | | 未実装 |
 
+notestudioの段階3〜6（執筆・レビュー・公開準備・分析）は実装しない。
+この工程はnotewriter（nw）が担当する。
+
 ## 禁止事項
 
 - `./ns decide`（テーマの採用・却下）と `./ns approve-plan`（企画の承認）を、ユーザーがチャットで
@@ -29,10 +32,19 @@ note で有料記事（情報整理型）を売るためのローカルツール
 - 使えるもの: `./ns show` `./ns context` `./ns themes` `./ns validate`
 - 結果は `inbox/research_YYYYMMDD_xxx.json` / `inbox/plan_T<ID>_v<版>.json` に保存し、validate が OK になったら
   **inbox/ のファイルだけを** commit・push する（プログラムや CLAUDE.md は変更しない。変更しても Mac 側には取り込まれない）。
+  ただし notewriter（nw）の開発は例外（下の「notewriter（nw）の開発」を参照）。
 - 企画を作れるのは `./ns show` で状態が「採用・企画待ち」等のテーマだけ（Mac で人が採用したもの）。
 - 書籍PDFはクラウドにない（著作物のためアップロードしない）。`tools/pdftool` も Mac 専用。書籍は参照できなかったと報告に書く。
 - 公的資料のPDFを読むときは `pip install pypdf` などで文字を取り出して原文を確認する。
 - 最後に「Macで `./ns sync` を実行すると取り込まれます」とユーザーに伝える。
+
+## notewriter（nw）の開発（クラウドでの例外）
+
+`SPEC.md` の note執筆支援アプリ。上の「inbox/ だけ commit」のルールは、nw の作業には適用しない。
+- nw の作業では、`notewriter/`・`nw`・`config/`・`tests/`・`SPEC.md`・README の変更と commit を認める。
+- 一方で、`notestudio/`・`./ns`・`data/` には触らない。
+- nw の変更は `./ns sync` ではなく、プルリクエストのマージで取り込む（sync は inbox/*.json しか受け取らない）。
+- かけら・下書きなどの実データは、作業フォルダ（既定 `workspace/`、本番は gocryptfs の復号ビュー）以外に置かない。commit もしない。
 
 ## 参考書籍（references/books/）
 
