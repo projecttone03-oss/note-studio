@@ -62,3 +62,25 @@ noteで有料記事（情報整理型）を継続的に売るための、個人�
 macOS 標準の Python 3.9 以上。追加インストール不要（標準ライブラリのみ）。
 
 テスト: `python3 -m unittest discover tests`
+
+---
+
+# notewriter（体験談・リサーチ型記事の制作支援、SPEC.md 第1段階）
+
+仕様は `SPEC.md`。今あるのは **かけら管理** と **コンプライアンスチェッカー**（警告を出すだけで、本文は書き換えない）。
+
+```
+./nw init                      # 作業フォルダ（既定 workspace/）を作る。本番は gocryptfs のマウント先で
+NW_DATA_DIR=~/nw-data ./nw serve --host 100.x.y.z   # 画面（既定 127.0.0.1:8766。外部公開は拒否、Tailscale のIPのみ可）
+./nw kakera add|list|search|show|rm   ./nw neta add|list|promote   ./nw article add|list
+./nw coverage 前編              # 区間×観点（五感・体の反応・セリフ・分岐点・感情）の充足度
+./nw check 前編.md 後編.md      # 禁句・助言表現・属性・属性の集中・出典/年度・シリーズ内の矛盾
+./nw rules                     # ルールファイルの場所と検証
+```
+
+- かけら・ネタ帳・下書き・来歴は作業フォルダにだけ保存し、`.gitignore` で除外している（リポジトリに入らない）。
+- 作業フォルダに目印 `.nw-vault` がないと読み書きを拒否する（暗号化フォルダが未マウントのまま平文に書くのを防ぐ）。
+- 書き込みは一時ファイル→fsync→rename の原子的な保存。
+- ルール: `config/compliance_rules.json`（既定）、`config/kakera.json`（観点・状態）。実名や具体的な地名など
+  個人の伏せ字リストは、作業フォルダ側の `config/compliance_rules.json` の `private_terms` に書く（リポジトリに入れない）。
+- **実データは、暗号化・ログ無害化・一時ファイル/スワップ対策・暗号化バックアップ・復元テストが済むまで入力しない**（SPEC.md）。

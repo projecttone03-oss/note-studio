@@ -14,3 +14,27 @@ tools/pdftool
 # Python
 __pycache__/
 *.pyc
+
+# ─────────────────────────────────────────────
+# 個人情報（かけら・ネタ帳・下書き・リサーチ資料・生成来歴・版履歴）は保存しない
+# 実データは notewriter の作業フォルダ（既定: workspace/、本番は gocryptfs の復号ビュー）に置く
+# ─────────────────────────────────────────────
+workspace/
+notewriter-data/
+/kakera/
+/neta/
+/drafts/
+/research_materials/
+/provenance/
+/versions/
+# 個人用の上書き設定（実名・地名などの伏せ字リストが入りうる）
+config/*.local.json
+config/*.local.yaml
+# 一時ファイル・バックアップ・書き出し
+*.tmp
+*.swp
+*~
+*.bak
+*.age
+*.gpg
+exports/
