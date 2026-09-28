@@ -190,6 +190,21 @@ mark.strong{background:#ffc2bd;box-shadow:inset 0 -2px 0 var(--ng)}
 mark.info{background:#d7ebff;box-shadow:inset 0 -2px 0 var(--sky)}
 .docname{font-weight:800;color:var(--main-dk)}
 .stack>*+*{margin-top:8px}
+input[type=date],input[type=password]{width:100%;font:inherit;font-size:16px;border:2px solid var(--line);border-radius:12px;padding:9px 12px;background:#fff;color:var(--ink);min-height:46px}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:grayscale(.6);transform:none;box-shadow:none}
+.opt{display:flex;gap:10px;align-items:flex-start;border:2px solid var(--line);border-radius:14px;padding:10px 14px;background:#fff;cursor:pointer;margin:0 0 8px}
+.opt:has(input:checked){border-color:var(--main);background:var(--main-weak)}
+.opt.off{cursor:not-allowed;background:var(--bg);color:var(--sub)}
+.opt input{width:20px;height:20px;margin:4px 0 0;flex:none}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 10px}
+pre.send{white-space:pre-wrap;word-break:break-word;background:#fbfdfe;border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.7;max-height:520px;overflow:auto;margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Noto Sans Mono CJK JP",monospace}
+.drop{position:relative;display:block;border:3px dashed var(--main);border-radius:18px;background:var(--main-weak);padding:34px 16px;text-align:center;font-weight:800;color:var(--main-dk);cursor:pointer}
+.drop.over{background:#cdeef1;border-style:solid}
+.drop input[type=file]{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;min-height:0;padding:0;border:0}
+.drop .dropnames{display:block;font-weight:600;color:var(--ink);margin-top:6px}
+.md h3{font-size:16px}.md h4{font-size:15px;margin:14px 0 4px}.md p{margin:6px 0 10px}
+.money{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.steps>li{margin-bottom:10px}
 @media(max-width:600px){main{padding:14px 12px 50px}.card{padding:16px 14px;border-radius:16px}
 .card h2,.ribbon{margin-left:-22px}h1{font-size:20px}.btnrow .btn{flex:1}}
 """
@@ -198,19 +213,25 @@ JS = """
 document.addEventListener('submit',function(ev){var f=ev.target;if(f.dataset&&f.dataset.confirm&&!window.confirm(f.dataset.confirm))ev.preventDefault();});
 document.querySelectorAll('input[data-secmap]').forEach(function(a){var m={};try{m=JSON.parse(a.dataset.secmap)}catch(x){}
 var s=document.getElementById(a.dataset.sec);if(!s)return;var f=function(){s.setAttribute('list',m[a.value]||'dl-sec-all')};a.addEventListener('input',f);f();});
+document.querySelectorAll('input[data-drop]').forEach(function(i){var b=i.parentNode,o=b.querySelector('.dropnames');
+i.addEventListener('change',function(){var n=[];for(var k=0;k<i.files.length;k++)n.push(i.files[k].name);if(o)o.textContent=n.length?n.length+'件: '+n.join('、'):'';});
+['dragenter','dragover'].forEach(function(t){i.addEventListener(t,function(){b.classList.add('over')})});
+['dragleave','drop'].forEach(function(t){i.addEventListener(t,function(){b.classList.remove('over')})});});
 """
 
 NAV = (("home", "/", "ダッシュボード"), ("neta", "/neta", "ネタ帳"), ("kakera", "/kakera", "かけら"),
-       ("articles", "/articles", "記事と充足度"), ("check", "/check", "チェッカー"), ("guide", "/guide", "使い方"))
+       ("articles", "/articles", "記事と充足度"), ("research", "/research", "リサーチ"), ("check", "/check", "チェッカー"),
+       ("guide", "/guide", "使い方"))
 
 
-def layout(title: str, body: str, active: str = "", flash: str = "", error: bool = False, nav: bool = True) -> str:
+def layout(title: str, body: str, active: str = "", flash: str = "", error: bool = False, nav: bool = True,
+           head: str = "") -> str:
     links = "".join(f'<a href="{href}" class="{"on" if key == active else ""}">{label}</a>'
                     for key, href, label in NAV) if nav else ""
-    fl = f'<div class="flash {"err" if error else ""}">{e(flash)}</div>' if flash else ""
+    fl = f'<div class="flash {"err" if error else ""}">{e(safe(flash))}</div>' if flash else ""
     return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
-<title>{e(title)} — notewriter</title><style>{CSS}</style></head><body>
+<title>{e(title)} — notewriter</title>{head}<style>{CSS}</style></head><body>
 <header><div class="bar"><span class="brand">notewriter<small>かけら管理・チェッカー</small></span></div>
 {f"<nav>{links}</nav>" if links else ""}</header>
 <main>{fl}{body}</main><script>{JS}</script></body></html>"""
@@ -590,6 +611,7 @@ def page_home() -> str:
 <textarea name="body" rows="3" placeholder="思いついたことを1行でも" required></textarea>
 <div class="btnrow"><button class="btn warm">ネタを保存</button></div></form>
 <p class="small">未整理のネタ <b>{st.get("neta_unsorted", 0)}</b> 件 → <a href="/neta">ネタ帳を開く</a></p></div>
+{research_home_card()}
 <div class="card"><h2>使用状況</h2><div>{by_status or '<span class="muted">—</span>'}</div></div>
 <div class="card"><h2>下書きのチェック</h2><p class="small">禁句・個別助言に読める言い回し・ぼかすべき属性などを警告します（直すかどうかは人が決めます）。</p>
 <a class="btn" href="/check">チェッカーを開く</a></div></div></div>"""
@@ -775,6 +797,547 @@ def page_check(vdir: Path, result: str = "", pasted: str = "", paste_name: str =
 <div class="btnrow"><button class="btn primary">アップロードしてチェック</button></div></form></div></div></div>"""
 
 
+# ---------- リサーチ ----------
+# ロジックは research.py / secrets.py。ここは表示と入力だけ。
+# 外に送るのは、人がリサーチ画面に書いた質問文（＋テンプレート）だけ。送る前に全文を見せて、OK を押してから送る。
+# APIキーはどのページにも出さない（登録状態は「登録済み／未登録」だけ）。例外メッセージは safe() を通す。
+
+def _research():
+    from . import research
+    return research
+
+
+def _secrets():
+    from . import secrets as nw_secrets
+    return nw_secrets
+
+
+def research_available() -> bool:
+    import importlib.util
+    try:
+        return importlib.util.find_spec("notewriter.research") is not None
+    except (ImportError, ValueError):
+        return False
+
+
+_KEYISH = re.compile(r"pplx-[A-Za-z0-9_\-]{6,}")
+
+
+def safe(text) -> str:
+    """画面・ログに出す前に、APIキーらしき文字列を伏せる（secrets.redact ＋ 念のための形での伏せ字）。"""
+    s = "" if text is None else str(text)
+    if not s:
+        return s
+    try:
+        s = _secrets().redact(s)
+    except Exception:  # secrets.py がまだない・壊れているときも、下の伏せ字は必ずかける
+        pass
+    return _KEYISH.sub("pplx-****", s)
+
+
+KIND_SHORT = {"trend": "トレンド", "deep": "深掘り", "import": "手動取り込み"}
+COST_KIND = {"claude": "追加料金なし", "pplx_standard": "使った分だけ", "pplx_deep": "使った分だけ（高め）"}
+JOB_STATUS = {"running": ("調べています", "b-st"), "done": ("完了", "b-ok"), "error": ("失敗", "b-strong"),
+              "limit": ("上限で停止", "b-warm")}
+COST_SOURCE = {"api": "APIの報告額", "computed": "トークン数から計算", "free": "追加料金なし", "none": "課金なし（失敗）",
+               "unknown": "不明（課金されたか分からない）"}
+ID_RE = r"[A-Za-z0-9][A-Za-z0-9_\-]*"
+
+
+def yen(v) -> str:
+    try:
+        n = float(v or 0)
+    except (TypeError, ValueError):
+        return "—"
+    if 0 < n < 1:
+        return "1円未満"
+    return f"{int(round(n)):,}円"
+
+
+def est_text(est) -> str:
+    """estimate() の結果を「だいたい ◯〜◯円」に。無料なら「追加料金なし」。"""
+    if isinstance(est, (int, float)):
+        return f"だいたい {yen(est)}"
+    if not isinstance(est, dict) or not est.get("paid"):
+        return "追加料金なし"
+    lo, hi = yen(est.get("jpy_low")), yen(est.get("jpy_high"))
+    return f"だいたい {hi}" if lo == hi else f"だいたい {lo}〜{hi}"
+
+
+def kind_label(kind: str) -> str:
+    if kind == "import":
+        return "手動取り込み"
+    try:
+        return _research().KINDS.get(kind, kind or "—")
+    except Exception:
+        return kind or "—"
+
+
+def provider_name(key: str) -> str:
+    try:
+        return _research().provider_label(key)
+    except Exception:
+        return key or "—"
+
+
+def provider_model(cfg: dict, key: str) -> str:
+    return str(((cfg.get("providers") or {}).get(key) or {}).get("model") or "")
+
+
+def article_options(current: str, none_label: str = "（記事なし）") -> str:
+    names = [a["name"] for a in _kakera().list_articles()]
+    if current and current not in names:
+        names.append(current)
+    return (f'<option value="">{e(none_label)}</option>' +
+            "".join(f'<option value="{e(n)}"{" selected" if n == current else ""}>{e(n)}</option>' for n in names))
+
+
+def usage_line(u: dict) -> str:
+    return (f'今月（{e(u.get("month"))}）の使用額 <b>{yen(u.get("total_jpy"))}</b> ／ 上限 {yen(u.get("budget_jpy"))}'
+            f'（残り {yen(u.get("remaining_jpy"))}）')
+
+
+def research_vals(src) -> dict:
+    """フォームまたはクエリ文字列から入力値を取り出す。"""
+    if isinstance(src, Form):
+        return {"kind": src.get("kind"), "provider": src.get("provider"), "article": src.get("article"),
+                "query": src.get("query", strip=False)}
+    return {k: (src.get(k) or [""])[0] for k in ("kind", "provider", "article", "query")}
+
+
+def hidden_fields(vals: dict, keys=("kind", "provider", "article", "query")) -> str:
+    return "".join(f'<input type="hidden" name="{k}" value="{e(vals.get(k, ""))}">' for k in keys)
+
+
+def page_research(vals: dict) -> str:
+    R, S = _research(), _secrets()
+    cfg = R.load_config()
+    kind = vals.get("kind") if vals.get("kind") in R.KINDS else "trend"
+    has_key = S.has_api_key()
+    usage = R.month_usage()
+    blocked: Dict[str, str] = {}
+    for p in R.PROVIDER_KEYS:
+        if not R.is_paid(p):
+            continue
+        if not has_key:
+            blocked[p] = 'APIキー未登録（<a href="/guide#perplexity">使い方を見る</a>・<a href="/settings/api-key">登録する</a>）'
+            continue
+        checks = [R.budget_check(p, k) for k in R.KINDS]
+        if not any(ok for ok, _ in checks):
+            blocked[p] = "今月の上限に達しています: " + e(safe(checks[0][1]))
+    provider = vals.get("provider") or cfg.get("default_provider") or "claude"
+    if provider not in R.PROVIDER_KEYS or provider in blocked:
+        provider = next((p for p in R.PROVIDER_KEYS if p not in blocked), "")
+    kinds = "".join(
+        f'<label class="opt"><input type="radio" name="kind" value="{e(k)}"{" checked" if k == kind else ""}>'
+        f'<span><b>{e(label)}</b><span class="small muted" style="display:block">'
+        f'{"テーマの候補をいくつか出します。どれを書くかはあなたが決めます。" if k == "trend" else "記事に使う材料（数字・制度・背景）を出典つきで集めます。"}'
+        f'</span></span></label>' for k, label in R.KINDS.items())
+    provs = []
+    for p in R.PROVIDER_KEYS:
+        ests = (" ／ ".join(f"{KIND_SHORT.get(k, k)}: {est_text(R.estimate(p, k))}" for k in R.KINDS) if R.is_paid(p)
+                else "Claude の契約の利用枠を使います。上限に達したら、止まって聞きます。")
+        off = p in blocked
+        reason = f'<span class="small" style="display:block;color:var(--ng);font-weight:700">{blocked[p]}</span>' if off else ""
+        provs.append(
+            f'<label class="opt{" off" if off else ""}"><input type="radio" name="provider" value="{e(p)}"'
+            f'{" checked" if p == provider else ""}{" disabled" if off else ""}>'
+            f'<span><b>{e(R.provider_label(p))}</b> <span class="badge {"b-ok" if not R.is_paid(p) else "b-warm"}">{e(COST_KIND.get(p, ""))}</span>'
+            f'<span class="small muted" style="display:block">{e(ests)}</span>{reason}</span></label>')
+    jobs = R.list_jobs(limit=5)
+    job_rows = "".join(
+        f'<tr><td class="small">{e((j.get("created") or "").replace("T", " "))}</td><td>{e(KIND_SHORT.get(j.get("kind"), j.get("kind")))}</td>'
+        f'<td>{e(j.get("provider_label") or provider_name(j.get("provider")))}</td>'
+        f'<td><a class="badge {JOB_STATUS.get(j.get("status"), ("", ""))[1]}" href="/research/jobs/{e(j.get("id"))}">'
+        f'{e(JOB_STATUS.get(j.get("status"), (j.get("status"), ""))[0])}</a></td></tr>' for j in jobs)
+    jobs_html = (f'<div class="card"><h2>最近の実行</h2><div class="tablewrap"><table><tr><th>日時</th><th>種類</th><th>担当</th><th>状態</th></tr>'
+                 f'{job_rows}</table></div></div>' if job_rows else "")
+    return f"""<h1>リサーチ</h1>
+<div class="btnrow" style="margin:0 0 16px"><a class="btn" href="/research/materials">リサーチ資料</a>
+<a class="btn" href="/research/usage">今月の使用額</a><a class="btn" href="/settings/api-key">APIキー</a></div>
+<div class="grid"><div class="card"><h2>調べる内容</h2>
+<form method="post" action="/research/confirm">
+<label class="f">種類</label><div class="opts">{kinds}</div>
+<label class="f">担当（1回ごとに選べます）</label>{"".join(provs)}
+<label class="f" for="r-article">記事（深掘り調査は記事を選んでください。トレンド調査は「記事なし」で大丈夫です）</label>
+<select id="r-article" name="article">{article_options(vals.get("article", ""))}</select>
+<label class="f" for="r-query">知りたいこと（質問文）</label>
+<textarea id="r-query" name="query" class="tall" required placeholder="例: 30代会社員が副業を始めるときの税金の手続き">{e(vals.get("query", ""))}</textarea>
+<div class="note" style="margin-top:12px"><b>ここに書いた文章だけが外に送られます。</b>かけら・下書き・ネタ帳の中身は送りません。<br>
+<span class="small">次の画面で、送る文章の全文と費用の目安を確認してから送ります（まだ送りません）。</span></div>
+<div class="btnrow"><button class="btn primary">確認画面へ（まだ送りません）</button></div></form></div>
+<div><div class="card warm"><h2>今月の使用額</h2><p>{usage_line(usage)}</p>
+<p class="small muted">Perplexity を使った分だけかかります。Claude は追加料金なしです。</p>
+<a class="btn sm" href="/research/usage">くわしく</a></div>{jobs_html}</div></div>"""
+
+
+def page_research_confirm(p: dict) -> str:
+    R, S = _research(), _secrets()
+    cfg = R.load_config()
+    usage = R.month_usage()
+    prov = p.get("provider", "")
+    paid = R.is_paid(prov)
+    est = p.get("estimate") or {}
+    problems = []
+    if paid and not S.has_api_key():
+        problems.append('Perplexity のAPIキーが未登録です。<a href="/settings/api-key">APIキーの登録</a>をしてから、もう一度お試しください。')
+    if not p.get("budget_ok", True):
+        problems.append(e(safe(p.get("budget_message") or "今月の上限に達しているため、Perplexity は使えません。")))
+    can_run = not problems
+    warns = p.get("warnings") or []
+    if warns:
+        items = "".join(
+            f'<li><span class="badge b-{e(w.get("severity") if w.get("severity") in SEVERITY_LABEL else "warn")}">'
+            f'{e(w.get("category"))}</span> <b>「{e(w.get("match"))}」</b>'
+            f'{" （" + e(w.get("line")) + "行目）" if w.get("line") else ""} {e(w.get("message"))}'
+            f'<div class="small muted">{e(w.get("excerpt"))}</div></li>' for w in warns)
+        warn_html = (f'<div class="note"><b>外に出すと困るかもしれない語があります（{len(warns)}件）。止めるかどうかはあなたが決めます。</b>'
+                     f'<ul>{items}</ul><span class="small">気になるときは「書き直す」で、地名・年齢・学校名などをぼかしてください。</span></div>')
+    else:
+        warn_html = '<p class="small muted">ぼかすべき属性などに当たりそうな語は見つかりませんでした（見つからない＝安全、ではありません）。</p>'
+    if paid:
+        hi = est.get("jpy_high") or 0
+        after = (usage.get("total_jpy") or 0) + hi
+        note = f'<p class="small muted">{e(est.get("pricing_note"))}</p>' if est.get("pricing_note") else ""
+        cost_html = (f'<p class="money">{e(est_text(est))}（目安）</p>{note}'
+                     f'<p>{usage_line(usage)}<br>実行したあとの見込み: 最大 <b>{yen(after)}</b></p>')
+        run_label = f"OK。この内容で送る（目安{est_text(est).replace('だいたい ', '')}かかります）"
+    else:
+        cost_html = '<p class="money">追加料金なし</p><p class="small muted">この Mac/サーバーでログインしている Claude の契約の利用枠を使います。</p>'
+        run_label = "OK。この内容で送る"
+    prob_html = "".join(f'<div class="card alert"><h2>このままでは送れません</h2><p>{x}</p></div>' for x in problems)
+    model = provider_model(cfg, prov)
+    return f"""<h1>送る前の確認</h1>
+<div class="note strong"><b>まだ何も送っていません。</b>下の内容でよければ「OK」を押してください。</div>
+{prob_html}
+<div class="grid"><div>
+<div class="card"><h2>外に送る文章（これが全文です）</h2>
+<p class="small">送り先: <b>{e(p.get("provider_label") or provider_name(prov))}</b>{"（モデル: " + e(model) + "）" if model else ""}
+ ／ 種類: {e(kind_label(p.get("kind")))} ／ 記事: {e(p.get("article") or "記事なし")}</p>
+<pre class="send">{e(p.get("prompt", ""))}</pre></div>
+<div class="card"><h2>気をつける語</h2>{warn_html}</div></div>
+<div><div class="card warm"><h2>費用</h2>{cost_html}</div>
+<div class="card"><form method="post" action="/research/run">{hidden_fields(p)}
+<input type="hidden" name="confirm_token" value="{e(p.get("confirm_token", ""))}">
+<button class="btn {"warm" if paid else "primary"}" style="width:100%"{"" if can_run else " disabled"}>{e(run_label)}</button></form>
+<form method="post" action="/research">{hidden_fields(p)}
+<div class="btnrow"><button class="btn" style="width:100%">書き直す</button></div></form></div></div></div>"""
+
+
+def page_research_job(job: dict) -> Tuple[str, str]:
+    """ジョブの画面。戻り値: (本文, head に足すもの)。"""
+    R = _research()
+    status = job.get("status")
+    head = ""
+    info = (f'<p class="small muted">{e(kind_label(job.get("kind")))} ／ 担当: {e(job.get("provider_label") or provider_name(job.get("provider")))}'
+            f' ／ 記事: {e(job.get("article") or "記事なし")} ／ 開始 {e((job.get("created") or "").replace("T", " "))}</p>')
+    query = f'<details><summary>送った質問文</summary><p>{lines_html(job.get("query", ""))}</p></details>'
+    if status == "running":
+        head = '<meta http-equiv="refresh" content="5">'
+        body = ('<div class="card"><h2>調べています（数分かかることがあります）</h2>'
+                '<p>この画面は5秒ごとに自動で更新します。閉じても調べ続けます。終わったら「リサーチ資料」に入ります。</p></div>')
+    elif status == "done":
+        mid = job.get("material_id") or ""
+        link = (f'<a class="btn primary" href="/research/materials/{e(mid)}">リサーチ資料 {e(mid)} を開く</a>' if mid
+                else '<a class="btn primary" href="/research/materials">リサーチ資料を見る</a>')
+        body = f'<div class="card"><h2>終わりました</h2><p>結果をリサーチ資料に保存しました。</p><div class="btnrow">{link}</div></div>'
+    elif status == "limit":
+        resets = job.get("limit_resets_at") or ""
+        when = f"{e(str(resets).replace('T', ' '))}ごろ解除" if resets else "解除の時刻は分かりませんでした"
+        pe = job.get("estimate_jpy_for_pplx")
+        if not pe:
+            try:
+                pe = R.estimate("pplx_standard", job.get("kind") or "trend")
+            except Exception:
+                pe = None
+        pe_text = est_text(pe).replace("だいたい ", "") if pe not in (None, "") else "不明"
+        vals = {"kind": job.get("kind", ""), "provider": "pplx_standard", "article": job.get("article", ""),
+                "query": job.get("query", "")}
+        detail = f'<p class="small muted">{e(safe(job.get("error")))}</p>' if job.get("error") else ""
+        body = f"""<div class="card alert"><h2>Claude の利用上限に達しました</h2>
+<p>Claude の利用上限に達しました（{when}）。<b>Perplexity で続けますか？（目安{e(pe_text)}）</b></p>{detail}
+<p class="small">自動では切り替えません。続けるときは、次の確認画面で送る文章と費用をもう一度確かめてから「OK」を押します。</p>
+<form method="post" action="/research/confirm">{hidden_fields(vals)}
+<div class="btnrow"><button class="btn warm">Perplexity で続ける（確認画面へ）</button>
+<a class="btn" href="/research">待つ</a></div></form></div>"""
+    else:
+        body = (f'<div class="card alert"><h2>うまくいきませんでした</h2><p>{lines_html(safe(job.get("error") or "理由は分かりませんでした。"))}</p>'
+                f'<div class="btnrow"><a class="btn" href="/research">リサーチ画面へ</a></div></div>')
+    return f"<h1>リサーチの実行 {e(job.get('id'))}</h1>{info}{body}{query}", head
+
+
+def material_provider(m: dict) -> str:
+    return str(m.get("provider_label") or m.get("provider") or "—")
+
+
+def material_badges(m: dict) -> str:
+    out = [f'<span class="badge b-vp">{e(KIND_SHORT.get(m.get("kind"), m.get("kind") or "資料"))}</span>']
+    if m.get("stale"):
+        out.append('<span class="badge b-strong">1年以上前</span>')
+    out.append(f'<span class="badge b-tag">{e(material_provider(m))}</span>')
+    return "".join(out)
+
+
+def page_materials(qs: dict) -> str:
+    R = _research()
+    article = (qs.get("article") or [""])[0].strip()
+    items = sorted(R.list_materials(article or None), key=lambda m: (m.get("researched_at") or "", m.get("id") or ""), reverse=True)
+    cards = []
+    for m in items:
+        cards.append(f"""<div class="kcard"><div class="head"><a class="kid" href="/research/materials/{e(m.get("id"))}">{e(m.get("id"))}</a>
+{material_badges(m)}<span>{e(m.get("article") or "記事なし")}</span></div>
+<p><b>{e(m.get("title") or short(m.get("query", ""), 80) or "（無題）")}</b></p>
+<div class="small muted">調べた日 {e(m.get("researched_at") or "—")} ／ モデル {e(m.get("model") or "—")} ／ 出典 {len(m.get("sources") or [])} 件</div></div>""")
+    import datetime as _dt
+    today = _dt.date.today().isoformat()
+    return f"""<h1>リサーチ資料</h1>
+<div class="note strong">体験談の記事では、リサーチ資料は<b>書き方・背景の参考</b>にとどめます。体験談の本文に、資料の事実を新しい事実として混ぜないでください。</div>
+<div class="btnrow" style="margin:0 0 16px"><a class="btn primary" href="/research">＋ リサーチする</a></div>
+<div class="grid"><div>
+<div class="card"><h2>絞り込み</h2><form method="get" action="/research/materials">
+<select name="article">{article_options(article, "（すべての記事）")}</select>
+<div class="btnrow"><button class="btn primary sm">表示</button></div></form></div>
+<p class="muted"><b>{len(items)}</b> 件（新しい順）</p>
+{"".join(cards) or '<div class="card"><p class="muted">まだリサーチ資料はありません。</p></div>'}</div>
+<div><div class="card warm"><h2>手動で取り込む</h2>
+<form method="post" action="/research/materials/import" enctype="multipart/form-data">
+<label class="drop">ここに .md ファイルをドラッグ&ドロップ<br><span class="small">（または押して選ぶ・複数可）</span>
+<input type="file" name="files" accept=".md,text/markdown" multiple required data-drop><span class="dropnames small"></span></label>
+<label class="f" for="i-article">記事</label><select id="i-article" name="article">{article_options(article)}</select>
+<label class="f" for="i-date">調べた日</label><input type="date" id="i-date" name="date" value="{e(today)}">
+<div class="btnrow"><button class="btn primary">取り込む</button></div></form>
+<p class="small muted">Perplexity Pro などで調べた結果を Markdown で保存したものを取り込めます。</p></div></div></div>"""
+
+
+_MD_LINK = re.compile(r"\[([^\]\n]+)\]\((https?://[^\s)]+)\)|(https?://[^\s<>()\[\]「」『』、。，）]+)")
+
+
+def _ext_link(url: str, text: str) -> str:
+    return f'<a href="{e(url)}" target="_blank" rel="noopener noreferrer">{e(text)}</a>'
+
+
+def _md_emph(escaped: str) -> str:
+    return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", escaped)
+
+
+def md_inline(raw: str) -> str:
+    """1行分をエスケープしながら、リンク（http/https のみ）と太字だけ整形する。"""
+    out, pos = [], 0
+    for m in _MD_LINK.finditer(raw):
+        out.append(_md_emph(e(raw[pos:m.start()])))
+        out.append(_ext_link(m[2], m[1]) if m[2] else _ext_link(m[3], m[3]))
+        pos = m.end()
+    out.append(_md_emph(e(raw[pos:])))
+    return "".join(out)
+
+
+def render_md(text: str) -> str:
+    """Markdown を安全第一で簡易表示（見出し・リスト・リンク・太字・コード枠だけ。HTML は全部エスケープ）。"""
+    out: List[str] = []
+    para: List[str] = []
+    code: List[str] = []
+    state = {"list": "", "code": False}
+
+    def flush() -> None:
+        if para:
+            out.append("<p>" + "<br>".join(md_inline(x) for x in para) + "</p>")
+            para.clear()
+        if state["list"]:
+            out.append(f'</{state["list"]}>')
+            state["list"] = ""
+
+    for line in _normalize(text).split("\n"):
+        s = line.strip()
+        if s.startswith("```"):
+            if state["code"]:
+                out.append(f'<pre class="send">{e(chr(10).join(code))}</pre>')
+                code.clear()
+                state["code"] = False
+            else:
+                flush()
+                state["code"] = True
+            continue
+        if state["code"]:
+            code.append(line)
+            continue
+        if not s:
+            flush()
+            continue
+        if s.startswith(">"):
+            flush()
+            out.append(f'<p class="small muted" style="border-left:4px solid var(--line);padding-left:10px;margin:4px 0">{md_inline(s.lstrip("> "))}</p>')
+            continue
+        m = re.match(r"(#{1,6})\s+(.*)", s)
+        if m:
+            flush()
+            tag = "h3" if len(m[1]) <= 2 else "h4"
+            out.append(f"<{tag}>{md_inline(m[2])}</{tag}>")
+            continue
+        m = re.match(r"(?:[-*+]|(\d+)[.)])\s+(.*)", s)
+        if m:
+            tag = "ol" if m[1] else "ul"
+            if para:
+                out.append("<p>" + "<br>".join(md_inline(x) for x in para) + "</p>")
+                para.clear()
+            if state["list"] != tag:
+                if state["list"]:
+                    out.append(f'</{state["list"]}>')
+                out.append(f"<{tag}>")
+                state["list"] = tag
+            out.append(f"<li>{md_inline(m[2])}</li>")
+            continue
+        if state["list"]:
+            out.append(f'</{state["list"]}>')
+            state["list"] = ""
+        para.append(s)
+    if state["code"]:
+        out.append(f'<pre class="send">{e(chr(10).join(code))}</pre>')
+    flush()
+    return "".join(out)
+
+
+def page_material(mid: str) -> str:
+    R = _research()
+    m = R.get_material(mid)
+    srcs = []
+    for s in m.get("sources") or []:
+        url = str(s.get("url") or "")
+        title = s.get("title") or url or "（無題）"
+        link = _ext_link(url, title) if re.match(r"https?://", url) else e(title)
+        extra = f'<div class="small muted">{e(url)}{" ／ " + e(s.get("date")) if s.get("date") else ""}</div>' if url else ""
+        srcs.append(f"<li>{link}{extra}</li>")
+    src_html = f'<ol>{"".join(srcs)}</ol>' if srcs else '<p class="muted">出典URLは記録されていません。本文の事実は一次情報で確認してください。</p>'
+    stale = (f'<div class="card alert"><h2>1年以上前の資料です</h2><p>調べた日から {e(m.get("age_days"))} 日たっています。'
+             f'制度・料金・数字は変わっている可能性があります。使う前に最新の情報で確認し直してください。</p></div>' if m.get("stale") else "")
+    cost = m.get("cost_jpy")
+    rows = [("記事", m.get("article") or "記事なし"), ("種類", kind_label(m.get("kind")) if m.get("kind") else "—"),
+            ("担当", material_provider(m)),
+            ("モデル", m.get("model") or "—"),
+            ("調べた日", f'{m.get("researched_at") or "—"}' + (f'（{m.get("age_days")}日前）' if m.get("age_days") not in (None, "") else "")),
+            ("費用", yen(cost) if cost not in (None, "") else "—"), ("取り込み", m.get("origin") or "—")]
+    table = "".join(f"<tr><th>{e(k)}</th><td>{e(v)}</td></tr>" for k, v in rows)
+    q = f'<details><summary>質問文</summary><p>{lines_html(m.get("query"))}</p></details>' if m.get("query") else ""
+    return f"""<h1>{e(m.get("title") or "リサーチ資料 " + str(m.get("id")))}</h1>
+<div class="note strong"><b>この資料は書き方・背景の参考です。</b>体験談の本文に、ここにある事実を新しい事実として混ぜないでください。
+数字や制度を記事に書くときは、出典の一次情報で確かめてから書きます。</div>{stale}
+<div class="grid"><div class="card"><h2>本文</h2><div class="md">{render_md(m.get("body", ""))}</div></div>
+<div><div class="card"><h2>情報</h2><div>{material_badges(m)}</div><table>{table}</table>{q}</div>
+<div class="card"><h2>出典（{len(srcs)}件）</h2>{src_html}</div>
+<div class="card"><h2>削除</h2><form method="post" action="/research/materials/{e(m.get("id"))}/delete"
+ data-confirm="リサーチ資料 {e(m.get("id"))} を削除します。元に戻せません。よろしいですか？">
+<div class="btnrow"><button class="btn ng">この資料を削除</button><a class="btn" href="/research/materials">一覧へ</a></div></form></div></div></div>"""
+
+
+def page_research_usage(qs: dict) -> str:
+    R = _research()
+    month = (qs.get("month") or [""])[0].strip()
+    u = R.month_usage(month if re.fullmatch(r"\d{4}-\d{2}", month) else None)
+    rows = []
+    for r in u.get("runs") or []:
+        usd = r.get("cost_usd")
+        usd_html = f'<div class="small muted">${e(usd)}</div>' if usd not in (None, "") and float(usd or 0) > 0 else ""
+        if r.get("cost_unknown"):
+            usd_html = f'<div class="small muted">不明（目安 最大{yen(r.get("estimated_jpy_high"))}）</div>'
+
+        rows.append(f'<tr><td class="small">{e((r.get("at") or "").replace("T", " "))}</td><td>{e(provider_name(r.get("provider")))}</td>'
+                    f'<td class="small">{e(r.get("model") or "—")}</td><td>{e(KIND_SHORT.get(r.get("kind"), r.get("kind") or "—"))}</td>'
+                    f'<td class="small">{e(r.get("article") or "—")}</td>'
+                    f'<td class="num">{"—" if r.get("cost_unknown") else yen(r.get("cost_jpy"))}{usd_html}</td><td class="small">{e(COST_SOURCE.get(r.get("cost_source"), r.get("cost_source") or "—"))}</td></tr>')
+    table = (f'<div class="tablewrap"><table><tr><th>日時</th><th>担当</th><th>モデル</th><th>種類</th><th>記事</th><th class="num">金額</th><th>算出方法</th></tr>'
+             f'{"".join(rows)}<tr><th colspan="5">合計（{e(u.get("count", len(rows)))}回）</th><td class="num"><b>{yen(u.get("total_jpy"))}</b></td><td></td></tr></table></div>'
+             if rows else '<p class="muted">この月の実行はまだありません。</p>')
+    unknown = (f'<div class="note">金額が分からない実行（通信が切れた等）が {e(u.get("unknown_count"))} 件あります。'
+               f'上限の計算では、目安の上限 {yen(u.get("unknown_estimated_jpy"))} を使ったものとして数えています。'
+               f'実際の金額は Perplexity の Billing 画面で確認してください。</div>' if u.get("unknown_count") else "")
+    return f"""<h1>リサーチの使用額</h1>
+<div class="kpi"><div><b>{yen(u.get("total_jpy"))}</b><span>{e(u.get("month"))} の使用額</span></div>
+<div><b>{yen(u.get("budget_jpy"))}</b><span>月の上限</span></div><div><b>{yen(u.get("remaining_jpy"))}</b><span>残り</span></div></div>
+<div class="card"><h2>実行の一覧</h2>{table}{unknown}
+<p class="small muted">「APIの報告額」は Perplexity が返した金額、「トークン数から計算」は使った量と設定ファイルの単価から出した目安です。
+円は設定の為替で換算した目安で、実際のカード請求額とは違うことがあります。</p></div>
+<div class="card"><h2>月の上限</h2><p>上限を超えそうなときは Perplexity を動かしません。
+上限は <code>config/research.json</code>（作業フォルダ側で上書き可）の <code>monthly_budget_jpy</code> で変えられます。</p></div>"""
+
+
+def page_api_key() -> str:
+    S = _secrets()
+    src = S.api_key_source()
+    if src == "env":
+        state = '<span class="badge b-ok">登録済み</span> 環境変数で設定済み'
+    elif S.has_api_key():
+        state = '<span class="badge b-ok">登録済み</span>'
+    else:
+        state = '<span class="badge b-warm">未登録</span>'
+    delete = ("" if src != "file" else
+              '<form method="post" action="/settings/api-key/delete" data-confirm="登録したAPIキーを削除します。よろしいですか？">'
+              '<div class="btnrow"><button class="btn ng">登録したキーを削除</button></div></form>')
+    env_note = ('<p class="small muted">環境変数で設定しているキーは、この画面からは消せません（起動するときの設定から外してください）。</p>'
+                if src == "env" else "")
+    return f"""<h1>APIキー（Perplexity）</h1>
+<div class="card"><h2>登録状態</h2><p>{state}</p>{env_note}{delete}</div>
+<div class="card warm"><h2>登録する</h2><form method="post" action="/settings/api-key">
+<label class="f" for="api-key">Perplexity のAPIキー（pplx- で始まる文字）</label>
+<input type="password" id="api-key" name="key" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+<div class="btnrow"><button class="btn primary">登録する</button></div></form>
+<p class="small muted">キーは作業フォルダの secrets/ に保存します（GitHubには上がりません）。登録したあとは、この画面にもキーは表示しません。</p>
+<p class="small">キーはパスワードと同じです。人に見せない・チャットやメールに貼らないでください。
+作り方は <a href="/guide#perplexity">使い方</a> にあります。</p></div>"""
+
+
+def research_home_card() -> str:
+    """ダッシュボード用。リサーチ機能がまだないときは何も出さない。"""
+    if not research_available():
+        return ""
+    try:
+        R = _research()
+        u = R.month_usage()
+        stale = len(R.stale_materials())
+    except store.VaultError:
+        raise
+    except Exception:
+        return ""
+    stale_html = (f'<a class="badge b-strong" href="/research/materials">1年以上前の資料 {stale} 件</a>' if stale
+                  else '<span class="badge b-ok">1年以上前の資料 0 件</span>')
+    return f"""<div class="card"><h2>リサーチ</h2>
+<p>今月のリサーチ費用 <b>{yen(u.get("total_jpy"))}</b>／上限{yen(u.get("budget_jpy"))}</p><div>{stale_html}</div>
+<div class="btnrow"><a class="btn sm primary" href="/research">リサーチする</a><a class="btn sm" href="/research/materials">資料</a></div></div>"""
+
+
+GUIDE_RESEARCH = """
+<div class="card" id="perplexity"><h2>リサーチ機能の使い方</h2>
+<p>リサーチには2つの種類があります。</p>
+<ul><li><b>トレンド調査</b> … 「何を書くか」を考えるための調査です。テーマの候補をいくつか出します。どれを書くかは、あなたが決めます。</li>
+<li><b>深掘り調査</b> … 記事に使う材料（数字・しくみ・背景）を、出典（どこに書いてあったか）つきで集めます。</li></ul>
+<p>調べる担当は、1回ごとに選べます。</p>
+<ul><li><b>Claude</b> … 追加料金なし。この Mac（またはサーバー）で <code>claude</code> コマンドにログインしてあることが前提です。
+Max 契約の利用上限に達したら、そこで止まって「Perplexity で続けますか？」と聞きます（勝手に切り替えません）。</li>
+<li><b>Perplexity ふつう／徹底調査</b> … 使った分だけお金がかかります。送る前に「だいたい◯円」を見せるので、OK を押したときだけ動きます。</li></ul>
+<p class="small">外に送るのは、リサーチ画面に書いた文章だけです。かけら・下書き・ネタ帳の中身は送りません。</p></div>
+
+<div class="card warm"><h2>Perplexity を使えるようにする（はじめの1回だけ）</h2>
+<p class="small">画面の表示が違ったら、近い名前のボタンを探してください。</p>
+<ol class="steps">
+<li><b>アカウントを作る</b><br>パソコンのブラウザで <code>https://console.perplexity.ai</code> を開いて、アカウントを作ります（ログインします）。
+はじめてだと「API グループ」（画面によっては「Projects &amp; Billing」）を作る画面が出るので、名前（例: 自分の名前）を入れて作ります。
+これを作らないと、鍵（APIキー）が作れません。<br>
+<span class="small muted">※ Perplexity Pro（月いくらの有料プラン）とは別の支払いです。Pro に入っていても、API用のお金は別にチャージが必要、と考えておきましょう（無料分があるかは画面で確認してください）。</span></li>
+<li><b>お金をチャージする（前払い）</b><br>左のメニューの「Billing」（支払い）→「Buy more credits」（クレジットを買う）→ 金額を選んで、カードで払います。
+支払いは Stripe（ストライプ）という支払い専門の会社の画面で行います。カードを登録しただけでは、お金はかかりません。<br>
+<b>最初は少ない金額（例: 10ドル）で十分です。</b></li>
+<li><b>自動チャージをオフにする</b><br>Billing の画面にある「Auto reload」（残りが減ると、自動でお金を追加する機能）は<b>使いません</b>。
+「Change preferences」（設定を変える）を押して、オフ（無効）になっていることを確かめます。オンになっていたら、オフにします。<br>
+オフなら、残りが0円になったら止まるだけで、勝手にお金は追加されません。残りがなくなると鍵が使えなくなり、このアプリには「残高がなくなっている可能性」と出ます。</li>
+<li><b>鍵（APIキー）を作る</b><br>左のメニューの「API keys」→「+ Generate API Key」（鍵を作る）を押します。
+<code>pplx-</code> で始まる長い文字が<b>1回だけ</b>表示されるので、すぐコピーします。あとから見直すことはできません（なくしたら、作り直せば大丈夫です）。</li>
+<li><b>このアプリに登録する</b><br>このアプリの <a href="/settings/api-key">「設定 &gt; APIキー」</a> に貼り付けて、「登録する」を押します。<br>
+鍵はパスワードと同じです。人に見せない・チャットやメールに貼らないでください。もし人に見られたら、Perplexity の画面でその鍵を削除して、作り直してください。</li>
+<li><b>月の上限を知っておく</b><br>このアプリには「月の上限」（最初は1000円）があります。超えそうなときは Perplexity は動きません。
+変えたいときは、作業フォルダの <code>config/research.json</code> に <code>{"monthly_budget_jpy": 2000}</code> のように書きます。</li></ol>
+<p class="small">料金はときどき変わります。最新の料金は Perplexity の料金ページ（<a href="https://docs.perplexity.ai/docs/getting-started/pricing" target="_blank" rel="noopener noreferrer">https://docs.perplexity.ai/docs/getting-started/pricing</a>）で確認してください。
+アプリの目安は、設定ファイルの値から計算しています。</p></div>
+"""
+
+
 # ---------- 使い方 ----------
 
 def page_guide() -> str:
@@ -789,7 +1352,10 @@ def page_guide() -> str:
 <div class="card"><h2>コマンド</h2><ul class="small">
 <li><code>./nw serve</code> … この画面（既定 127.0.0.1:8766）。スマホから使うときは <code>./nw serve --host 100.x.y.z</code>（Tailscale のIP）</li>
 <li><code>./nw kakera add / list / search / show / rm</code>、<code>./nw neta add / list / promote</code>、<code>./nw article add / list</code></li>
-<li><code>./nw coverage 記事名</code>、<code>./nw check 下書き.md ...</code>、<code>./nw rules</code></li></ul></div>
+<li><code>./nw coverage 記事名</code>、<code>./nw check 下書き.md ...</code>、<code>./nw rules</code></li>
+<li><code>./nw research run --kind trend|deep [--provider claude|pplx_standard|pplx_deep] [--article 記事] 質問文</code>（送る前に全文を表示し、yes と打ったときだけ送ります）</li>
+<li><code>./nw research list / show / import / usage</code>、<code>./nw research key set / status / delete</code></li></ul></div>
+<h1 style="margin-top:28px">リサーチ</h1>{GUIDE_RESEARCH}
 <h1 style="margin-top:28px">初回のお知らせ（再掲）</h1>{NOTICE_BODY}"""
 
 
@@ -875,8 +1441,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def _page(self, title: str, body: str, active: str = "", status: int = 200, flash: str = "", error: bool = False,
-              nav: bool = True) -> None:
-        self._send(layout(title, body, active, flash, error, nav), status)
+              nav: bool = True, head: str = "") -> None:
+        self._send(layout(title, body, active, flash, error, nav, head), status)
 
     def _redirect_to(self, location: str, flash: str = "", error: bool = False) -> None:
         if flash:
@@ -940,7 +1506,10 @@ class Handler(BaseHTTPRequestHandler):
             self._page("はじめにお読みください", page_notice(nxt), nav=False)
             return
         try:
-            page, title, active = None, "", ""
+            page, title, active, head = None, "", "", ""
+            if path == "/research/confirm":
+                self._redirect_to("/research")
+                return
             if path == "/":
                 page, title, active = page_home(), "ダッシュボード", "home"
             elif path == "/kakera":
@@ -962,17 +1531,30 @@ class Handler(BaseHTTPRequestHandler):
             elif m := re.fullmatch(r"/coverage/([^/]+)", path):
                 name = unquote(m[1])
                 page, title, active = page_coverage(name), f"充足度 {name}", "articles"
+            elif path == "/research":
+                page, title, active = page_research(research_vals(qs)), "リサーチ", "research"
+            elif m := re.fullmatch(rf"/research/jobs/({ID_RE})", path):
+                page, head = page_research_job(_research().get_job(m[1]))
+                title, active = "リサーチの実行", "research"
+            elif path == "/research/materials":
+                page, title, active = page_materials(qs), "リサーチ資料", "research"
+            elif m := re.fullmatch(rf"/research/materials/({ID_RE})", path):
+                page, title, active = page_material(m[1]), f"リサーチ資料 {m[1]}", "research"
+            elif path == "/research/usage":
+                page, title, active = page_research_usage(qs), "リサーチの使用額", "research"
+            elif path == "/settings/api-key":
+                page, title, active = page_api_key(), "APIキー", "research"
             if page is None:
                 self._page("見つかりません", "<h1>見つかりません</h1>", status=404)
             else:
-                self._page(title, page, active, flash=flash, error=err)
+                self._page(title, page, active, flash=flash, error=err, head=head)
         except KeyError:
             self._page("見つかりません", "<h1>見つかりません</h1><p>指定したものはありません（削除された可能性があります）。</p>", status=404)
         except store.VaultError as ex:
             self._page("作業フォルダが使えません", page_vault_error(ex), status=503, nav=False)
         except Exception as ex:  # 本文を含みうるのでトレースバックは出さない
             sys.stderr.write(f"error: {type(ex).__name__}\n")
-            self._page("エラー", f"<h1>エラーが起きました</h1><p>{e(type(ex).__name__)}: {e(ex)}</p>", status=500)
+            self._page("エラー", f"<h1>エラーが起きました</h1><p>{e(type(ex).__name__)}: {e(safe(ex))}</p>", status=500)
 
     # --- POST ---
     def do_POST(self) -> None:
@@ -1015,9 +1597,12 @@ class Handler(BaseHTTPRequestHandler):
             msg = ex.args[0] if isinstance(ex, KeyError) and ex.args else ex
             if isinstance(ex, KeyError):
                 msg = f"見つかりません: {msg}"
-            self._redirect_to(self._back(path), f"エラー: {msg}", error=True)
+            self._redirect_to(self._back(path), safe(f"エラー: {msg}"), error=True)
         except store.VaultError as ex:
             self._page("作業フォルダが使えません", page_vault_error(ex), status=503, nav=False)
+        except Exception as ex:  # 送信内容（APIキー・本文）を含みうるのでトレースバックは出さない
+            sys.stderr.write(f"error: {type(ex).__name__}\n")
+            self._page("エラー", f"<h1>エラーが起きました</h1><p>{e(type(ex).__name__)}: {e(safe(ex))}</p>", status=500)
 
     @staticmethod
     def _back(path: str) -> str:
@@ -1029,12 +1614,21 @@ class Handler(BaseHTTPRequestHandler):
             return "/kakera/new" if m[1] == "new" else f"/kakera/{m[1]}"
         if path.startswith("/articles"):
             return "/articles"
+        if path.startswith("/research/materials"):
+            return "/research/materials"
+        if path.startswith("/research"):
+            return "/research"
+        if path.startswith("/settings/api-key"):
+            return "/settings/api-key"
         return "/"
 
     def _post(self, path: str, form: Form, vdir: Path) -> None:
         K = _kakera()
         if path == "/check":
             self._post_check(form, vdir)
+            return
+        if path.startswith("/research") or path.startswith("/settings/"):
+            self._post_research(path, form)
             return
         if path == "/kakera/new":
             fields = kakera_fields_from_form(form)
@@ -1129,6 +1723,82 @@ class Handler(BaseHTTPRequestHandler):
             docs = [(paste_name or "貼り付けた本文", pasted)]
         result = page_check_result(docs)
         self._page("チェック結果", page_check(vdir, result, pasted, paste_name, selected), "check")
+
+
+    def _research_form_page(self, vals: dict, flash: str = "", error: bool = False, status: int = 200) -> None:
+        """入力画面を、値を入れたまま表示する（書き直す・エラー時。何も保存しない）。"""
+        self._page("リサーチ", page_research(vals), "research", status=status, flash=safe(flash), error=error)
+
+    def _post_research(self, path: str, form: Form) -> None:
+        R = _research()
+        if path == "/research":  # 「書き直す」: 入力画面に値を戻すだけ
+            self._research_form_page(research_vals(form))
+        elif path == "/research/confirm":  # まだ送らない。送る全文・警告・費用を見せる
+            vals = research_vals(form)
+            if not vals["query"].strip():
+                self._research_form_page(vals, "エラー: 知りたいこと（質問文）を書いてください。", error=True)
+                return
+            if vals["kind"] == "deep" and not vals["article"]:
+                self._research_form_page(vals, "エラー: 深掘り調査は、記事を選んでください。", error=True)
+                return
+            try:
+                prepared = R.prepare(vals["kind"], vals["provider"], vals["query"], article=vals["article"])
+            except (ValueError, KeyError) as ex:
+                self._research_form_page(vals, f"エラー: {ex}", error=True)
+                return
+            self._page("送る前の確認", page_research_confirm(prepared), "research")
+        elif path == "/research/run":
+            vals = research_vals(form)
+            try:
+                job_id = R.start_job(vals["kind"], vals["provider"], vals["query"], vals["article"], form.get("confirm_token"))
+            except R.ConfirmMismatch:
+                self._research_form_page(vals, "エラー: 確認した内容と違うため、送りませんでした。もう一度確認画面から進めてください。",
+                                         error=True)
+                return
+            except (R.BudgetExceeded, ValueError) as ex:
+                self._research_form_page(vals, f"エラー: {ex}", error=True)
+                return
+            self._redirect_to(f"/research/jobs/{quote(str(job_id), safe='')}", "送りました。結果が出るまでお待ちください")
+        elif path == "/research/materials/import":
+            ups = [(fn or "無題.md", data) for _, fn, data in form.files if data]
+            if not ups:
+                raise ValueError("ファイルを選んでください。")
+            bad = [fn for fn, _ in ups if Path(fn).suffix.lower() != ".md"]
+            if bad:
+                raise ValueError("Markdown（.md）ファイルだけ取り込めます: " + "、".join(Path(b).name for b in bad))
+            date = form.get("date")
+            if date and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+                raise ValueError("調べた日は YYYY-MM-DD の形で入れてください。")
+            done = []
+            for fn, data in sorted(ups, key=lambda x: x[0]):
+                try:
+                    text = data.decode("utf-8-sig")
+                except UnicodeDecodeError:
+                    raise ValueError(f"{Path(fn).name} は文字コードが UTF-8 ではないため取り込めません。") from None
+                m = R.import_material(Path(fn).name, _normalize(text),
+                                      article=form.get("article"), researched_at=date or None)
+                done.append(str(m.get("id")))
+            art = form.get("article")
+            self._redirect_to(qurl("/research/materials", article=art), f"{len(done)} 件取り込みました（{'、'.join(done)}）")
+        elif m := re.fullmatch(rf"/research/materials/({ID_RE})/delete", path):
+            R.delete_material(m[1])
+            self._redirect_to("/research/materials", f"リサーチ資料 {m[1]} を削除しました")
+        elif path == "/settings/api-key":
+            key = form.get("key")
+            form.fields.pop("key", None)
+            if not key:
+                raise ValueError("APIキーを入力してください。")
+            warns = _secrets().set_api_key(key)
+            key = ""
+            msg = "APIキーを登録しました"
+            if warns:
+                msg += "（" + " / ".join(str(w) for w in warns) + "）"
+            self._redirect_to("/settings/api-key", safe(msg))
+        elif path == "/settings/api-key/delete":
+            ok = _secrets().delete_api_key()
+            self._redirect_to("/settings/api-key", "APIキーを削除しました" if ok else "削除するキーはありませんでした")
+        else:
+            self._send("not found", 404)
 
 
 class _Server(ThreadingHTTPServer):
