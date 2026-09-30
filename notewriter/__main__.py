@@ -16,6 +16,11 @@
   ./nw ideas list [--status 未検討]|set CID 状態|to-research CID...
   ./nw skills show|edit                       得意・経験リスト（edit は $EDITOR か標準入力）
   ./nw reaction add|list                      反応記録（スキ・コメント・購入の数を手で記録）
+  ./nw draft list|show|versions|diff|restore|save ...   体験談の下書き（版の一覧・差分・手直しの保存）
+  ./nw draft generate 記事 区間 [--show-prompt]         区間の下書きを作る（かけらだけ・ツールなし。yes で実行）
+  ./nw draft revise 記事 段落番号 指示 [--show-prompt]  段落の書き直しを提案させる（採用するまで本文は変わらない）
+  ./nw draft accept|discard JOB                        改稿の提案を採用／見送り
+  ./nw style show|edit|edits                           文体ルール集（edit は $EDITOR か標準入力）と、手直しの記録
 
 作業フォルダが使えない（未初期化・未マウント）ときは終了コード2。check と rules は作業フォルダなしでも動く。
 """
@@ -624,6 +629,197 @@ def cmd_skills_edit(args) -> None:
     print(f"得意・経験リストを保存しました（{len(text.strip())}字）")
 
 
+def _writing():
+    from . import writing
+    return writing
+
+
+def _print_blocks(blocks, show_flags: bool = True) -> None:
+    for i, b in enumerate(blocks):
+        if b.get("kind") == "heading":
+            print(f"\n[{i}] {b['text']}")
+            continue
+        cite = "、".join(b.get("kakera") or []) or "根拠なし"
+        who = {"ai": "AI", "human": "人"}.get(b.get("origin"), b.get("origin") or "")
+        print(f"\n[{i}]（{who}／根拠: {cite}）\n{b['text']}")
+        if show_flags:
+            for f in b.get("flags") or []:
+                print(f"    ⚠ {f}")
+
+
+def _draft_confirm(p: dict, what: str, show_prompt: bool) -> None:
+    if show_prompt:
+        print("===== Claude に渡す文章（これが全文です） =====")
+        print(p["prompt"])
+        print("===== ここまで =====\n")
+    print(f"{what}")
+    print(f"Claude に渡す文章: {p['chars']}字（全文は --show-prompt で表示）")
+    print(f"材料のかけら: {'、'.join(p['kakera_ids'])}（この区間のもの。「保留」は除く）")
+    print("ツールなし・Web検索なし・MCPなしの別セッションで、指示とかけらは標準入力で渡します。")
+    if p.get("replaces"):
+        print("※ この区間のいまの本文は置き換わります（前の版は残るので戻せます）。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+
+
+def _job_failed(W, job: dict) -> None:
+    if job.get("status") == "limit":
+        print(_safe(job.get("error") or W.limit_message()), file=sys.stderr)
+        sys.exit(3)
+    print(f"うまくいきませんでした: {_safe(job.get('error') or '理由は分かりませんでした')}", file=sys.stderr)
+    sys.exit(1)
+
+
+def cmd_draft_list(args) -> None:
+    W = _writing()
+    rows = W.list_drafts()
+    if not rows:
+        print("記事がありません（./nw article add で記事と区間を登録）")
+    for r in rows:
+        lt = r["latest"]
+        state = f"v{lt['v']}（{W.SOURCES.get(lt['source'], lt['source'])}・{lt['created']}）" if lt else "下書きなし"
+        changed = "  ※ファイルが直接編集されています（./nw draft save で版にする）" if lt and W.file_changed(r["article"]) else ""
+        print(f"{r['article']}  {state}{changed}")
+
+
+def cmd_draft_generate(args) -> None:
+    W = _writing()
+    p = W.prepare_generate(args.article, args.section)
+    _draft_confirm(p, f"記事「{p['article']}」の区間「{p['section']}」の下書きを作ります。", args.show_prompt)
+    print("下書きを書いています（1〜数分かかることがあります）…", flush=True)
+    job = W.run_job(p, p["confirm_token"])
+    if job.get("status") == "conflict":
+        print(_safe(job["error"]), file=sys.stderr)
+        print(f"結果を入れるなら: ./nw draft accept {job['id']}", file=sys.stderr)
+        sys.exit(1)
+    if job.get("status") != "done":
+        _job_failed(W, job)
+    cur = W.current(p["article"])
+    rng = W._section_range(cur["blocks"], p["section"])
+    blocks = cur["blocks"][rng[0]:rng[1]] if rng else []
+    print(f"v{job['version']} として保存しました（{W.draft_path(p['article'])}）。")
+    _print_blocks(blocks)
+    n = sum(len(b.get("flags") or []) for b in blocks)
+    print(f"\n確認してほしい印: {n} 件（かけらと照らして、人が判断してください）")
+
+
+def cmd_draft_show(args) -> None:
+    W = _writing()
+    data = W.get_version(args.article, args.version) if args.version else W.current(args.article)
+    if data is None:
+        print("まだ下書きがありません（./nw draft generate 記事 区間）")
+        return
+    m = data["meta"]
+    print(f"{args.article} v{m['v']}（{W.SOURCES.get(m['source'], m['source'])}・{m['created']}）{m.get('note', '')}")
+    _print_blocks(data["blocks"])
+
+
+def cmd_draft_versions(args) -> None:
+    W = _writing()
+    for m in W.versions(args.article):
+        extra = f" 来歴{m['provenance_id']}" if m.get("provenance_id") else ""
+        print(f"v{m['v']}  {m['created']}  {W.SOURCES.get(m['source'], m['source'])}  {m.get('note', '')}{extra}")
+
+
+def cmd_draft_diff(args) -> None:
+    for o in _writing().diff(args.article, args.a, args.b):
+        if o["op"] == "equal":
+            continue
+        for t in o["old"]:
+            print("- " + t.replace("\n", "\n- "))
+        for t in o["new"]:
+            print("+ " + t.replace("\n", "\n+ "))
+        print()
+
+
+def cmd_draft_restore(args) -> None:
+    m = _writing().restore(args.article, args.version)
+    print(f"v{args.version} の内容を v{m['v']} として保存しました。")
+
+
+def cmd_draft_save(args) -> None:
+    W = _writing()
+    text = W.draft_path(args.article).read_text(encoding="utf-8") if not args.stdin else sys.stdin.read()
+    m = W.save_human_edit(args.article, text, args.note)
+    print(f"手直しを v{m['v']} として保存しました。")
+
+
+def cmd_draft_revise(args) -> None:
+    W = _writing()
+    p = W.prepare_revise(args.article, args.block, args.instruction)
+    print(f"直す段落 [{p['block']}]:\n{p['old_text']}\n")
+    _draft_confirm(p, f"指示「{p['instruction']}」で、この段落の書き直しを提案させます（採用するまで本文は変わりません）。",
+                   args.show_prompt)
+    print("書き直しを考えています…", flush=True)
+    job = W.run_job(p, p["confirm_token"])
+    if job.get("status") != "done":
+        _job_failed(W, job)
+    prop = job["proposal"]
+    print(f"\n提案（{job['id']}／根拠: {'、'.join(prop.get('kakera') or []) or 'なし'}）:\n{prop['text']}")
+    for f in prop.get("flags") or []:
+        print(f"    ⚠ {f}")
+    if _ask_yes("\nこの提案を本文に入れますか？ 入れるなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        m = W.accept_revision(job["id"])
+        print(f"v{m['v']} として保存しました。")
+    else:
+        print(f"入れていません。あとで入れるなら: ./nw draft accept {job['id']}")
+
+
+def cmd_draft_accept(args) -> None:
+    W = _writing()
+    job = W.get_job(args.job)
+    m = W.apply_conflicted(args.job) if job.get("status") == "conflict" else W.accept_revision(args.job)
+    print(f"v{m['v']} として保存しました。")
+
+
+def cmd_draft_discard(args) -> None:
+    _writing().discard(args.job)
+    print("見送りました（本文は変わっていません）。")
+
+
+def cmd_style_show(args) -> None:
+    print(_writing().get_style())
+
+
+def cmd_style_edit(args) -> None:
+    import shlex
+    import subprocess
+    import tempfile
+    W = _writing()
+    editor = os.environ.get("VISUAL") or os.environ.get("EDITOR")
+    if editor and sys.stdin.isatty():
+        d = W.style_path().parent  # 一時ファイルも作業フォルダ（暗号化境界）の内側に作る
+        d.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(prefix=".style-edit-", suffix=".md", dir=str(d))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(W.get_style())
+            if subprocess.call(shlex.split(editor) + [tmp]) != 0:
+                sys.exit("エディタが正常に終わらなかったため、保存しませんでした。")
+            text = Path(tmp).read_text(encoding="utf-8")
+        finally:
+            try:
+                os.unlink(tmp)
+            except FileNotFoundError:
+                pass
+    else:
+        if sys.stdin.isatty():
+            sys.exit("$EDITOR を設定するか、標準入力から流し込んでください（例: ./nw style edit < rules.md）。")
+        text = sys.stdin.read()
+    W.save_style(text)
+    print(f"文体ルール集を保存しました（{W.style_path()}）")
+
+
+def cmd_style_edits(args) -> None:
+    edits = _writing().list_edits()
+    if not edits:
+        print("まだ記録がありません（AI が書いた段落を人が直すと記録されます）。")
+    for x in edits[-args.limit:]:
+        print(f"--- {x.get('at')} {x.get('article')}／{x.get('section')}（v{x.get('version')}）")
+        print(f"AI: {x.get('ai')}\n人: {x.get('human')}")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -788,6 +984,37 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--memo", default="")
     a.set_defaults(func=cmd_reaction_add)
     rx.add_parser("list", help="記事ごとの一覧").set_defaults(func=cmd_reaction_list)
+    d = sub.add_parser("draft", help="体験談の下書き（作成・改稿・版）").add_subparsers(dest="sub", required=True)
+    d.add_parser("list", help="下書きのある記事と最新の版").set_defaults(func=cmd_draft_list)
+    a = d.add_parser("generate", help="区間の下書きを作る（かけらだけ・ツールなし。yes で実行）")
+    a.add_argument("article"); a.add_argument("section")
+    a.add_argument("--show-prompt", action="store_true", help="Claude に渡す全文を表示する")
+    a.set_defaults(func=cmd_draft_generate)
+    a = d.add_parser("show", help="下書きを段落番号・根拠・印つきで表示")
+    a.add_argument("article"); a.add_argument("--version", type=int, default=0)
+    a.set_defaults(func=cmd_draft_show)
+    a = d.add_parser("versions", help="版の一覧"); a.add_argument("article"); a.set_defaults(func=cmd_draft_versions)
+    a = d.add_parser("diff", help="2つの版の差分（段落単位）")
+    a.add_argument("article"); a.add_argument("a", type=int); a.add_argument("b", type=int)
+    a.set_defaults(func=cmd_draft_diff)
+    a = d.add_parser("restore", help="前の版に戻す（新しい版として保存）")
+    a.add_argument("article"); a.add_argument("version", type=int); a.set_defaults(func=cmd_draft_restore)
+    a = d.add_parser("save", help="下書きファイルの手直しを新しい版として保存する")
+    a.add_argument("article"); a.add_argument("--note", default="")
+    a.add_argument("--stdin", action="store_true", help="ファイルではなく標準入力の本文を保存する")
+    a.set_defaults(func=cmd_draft_save)
+    a = d.add_parser("revise", help="段落の書き直しを提案させる（採用するまで本文は変わらない）")
+    a.add_argument("article"); a.add_argument("block", type=int); a.add_argument("instruction")
+    a.add_argument("--show-prompt", action="store_true"); a.set_defaults(func=cmd_draft_revise)
+    a = d.add_parser("accept", help="改稿の提案（または保留中の作成結果）を本文に入れる")
+    a.add_argument("job"); a.set_defaults(func=cmd_draft_accept)
+    a = d.add_parser("discard", help="改稿の提案を見送る"); a.add_argument("job"); a.set_defaults(func=cmd_draft_discard)
+
+    st = sub.add_parser("style", help="文体ルール集").add_subparsers(dest="sub", required=True)
+    st.add_parser("show", help="表示").set_defaults(func=cmd_style_show)
+    st.add_parser("edit", help="書く（$EDITOR か標準入力）").set_defaults(func=cmd_style_edit)
+    a = st.add_parser("edits", help="AI の段落と人の手直しの記録（文体学習の材料）")
+    a.add_argument("--limit", type=int, default=20); a.set_defaults(func=cmd_style_edits)
     return p
 
 
@@ -808,7 +1035,7 @@ def main(argv=None) -> None:
         print("\n中止しました。", file=sys.stderr)
         sys.exit(130)
     except Exception as ex:  # リサーチは外部とやり取りするので、トレースバックではなく伏せ字済みの理由だけ出す
-        if getattr(args, "cmd", "") not in ("research", "ideas"):
+        if getattr(args, "cmd", "") not in ("research", "ideas", "draft"):
             raise
         print(_safe(f"エラー（{type(ex).__name__}）: {ex}"), file=sys.stderr)
         sys.exit(1)

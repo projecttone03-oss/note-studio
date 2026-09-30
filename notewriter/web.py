@@ -211,6 +211,13 @@ pre.send{white-space:pre-wrap;word-break:break-word;background:#fbfdfe;border:2p
 .icard .pick{display:inline-flex;align-items:center;gap:8px;font-weight:800;cursor:pointer;min-height:40px}
 .icard .pick input{width:22px;height:22px;margin:0}
 .sticky{position:sticky;bottom:10px;z-index:5;background:var(--card);border-radius:16px;padding:10px 14px;box-shadow:var(--shadow)}
+.blk{border-radius:14px;padding:10px 14px;margin:0 0 12px;background:#fff;border:2px solid var(--line)}
+.blk.ai{border-left:6px solid var(--sky)}.blk.human{border-left:6px solid var(--ok)}
+.blk.del{background:var(--ng-weak);border-color:#f4c7c3;text-decoration:line-through;text-decoration-color:rgba(229,83,75,.45)}
+.blk.ins{background:var(--ok-weak);border-color:#bfe7d2}.blk.same{color:var(--sub)}
+.bhead{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:4px}.btext{white-space:normal}
+.flag{font-size:13px;font-weight:700;color:var(--warm-dk);background:var(--warm-weak);border-radius:10px;padding:4px 10px;margin:6px 0 0}
+.sechead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:3px solid var(--main-weak);padding-bottom:4px;margin-top:22px}
 .example{background:var(--main-weak);border-radius:14px;padding:12px 16px;margin:0 0 12px;border-left:6px solid var(--main)}
 @media(max-width:600px){main{padding:14px 12px 50px}.card{padding:16px 14px;border-radius:16px}
 .card h2,.ribbon{margin-left:-22px}h1{font-size:20px}.btnrow .btn{flex:1}}
@@ -227,7 +234,7 @@ i.addEventListener('change',function(){var n=[];for(var k=0;k<i.files.length;k++
 """
 
 NAV = (("home", "/", "ダッシュボード"), ("ideas", "/ideas", "ネタ出し"), ("neta", "/neta", "ネタ帳"),
-       ("kakera", "/kakera", "かけら"), ("articles", "/articles", "記事と充足度"), ("research", "/research", "リサーチ"),
+       ("kakera", "/kakera", "かけら"), ("articles", "/articles", "記事と充足度"), ("drafts", "/drafts", "下書き"), ("research", "/research", "リサーチ"),
        ("reactions", "/reactions", "反応記録"), ("check", "/check", "チェッカー"), ("guide", "/guide", "使い方"))
 
 
@@ -239,7 +246,7 @@ def layout(title: str, body: str, active: str = "", flash: str = "", error: bool
     return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>{e(title)} — notewriter</title>{head}<style>{CSS}</style></head><body>
-<header><div class="bar"><span class="brand">notewriter<small>かけら管理・チェッカー</small></span></div>
+<header><div class="bar"><span class="brand">notewriter<small>体験談・リサーチ記事の制作支援</small></span></div>
 {f"<nav>{links}</nav>" if links else ""}</header>
 <main>{fl}{body}</main><script>{JS}</script></body></html>"""
 
@@ -1350,6 +1357,11 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 # ロジックは ideas.py。材料（得意・経験リスト・ネタ帳・反応記録の要約・過去の候補）は Anthropic の Claude に渡す
 # （Web検索はしない）。送る前に全文を見せて、OK を押してから渡す。かけらは材料にしない。
 
+def _writing_web():
+    from . import web_writing
+    return web_writing
+
+
 def _ideas():
     from . import ideas
     return ideas
@@ -1867,6 +1879,10 @@ class Handler(BaseHTTPRequestHandler):
                 page, title, active = page_skills(), "得意・経験リスト", "ideas"
             elif path == "/reactions":
                 page, title, active = page_reactions(), "反応記録", "reactions"
+            if page is None and (path == "/style" or path.startswith("/drafts")):
+                r = _writing_web().route_get(path, qs)
+                if r:
+                    page, title, active, head = r
             if page is None:
                 self._page("見つかりません", "<h1>見つかりません</h1>", status=404)
             else:
@@ -1949,9 +1965,13 @@ class Handler(BaseHTTPRequestHandler):
             return "/ideas"
         if path.startswith("/reactions"):
             return "/reactions"
+        if path == "/style" or path.startswith("/drafts"):
+            return _writing_web().back(path)
         return "/"
 
     def _post(self, path: str, form: Form, vdir: Path) -> None:
+        if (path == "/style" or path.startswith("/drafts")) and _writing_web().post(self, path, form):
+            return
         K = _kakera()
         if path == "/check":
             self._post_check(form, vdir)
