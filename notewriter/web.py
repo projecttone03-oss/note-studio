@@ -222,6 +222,8 @@ pre.send{white-space:pre-wrap;word-break:break-word;background:#fbfdfe;border:2p
 .pace td{vertical-align:middle;white-space:nowrap}.pace td:not(:first-child){min-width:90px}
 .pbar{display:inline-block;height:10px;border-radius:99px;margin-right:6px;vertical-align:middle;background:var(--main)}
 .pbar.n{background:var(--sun)}.pbar.p{background:var(--sky)}
+.snstext{font-size:16px;background:#fbfdfe;border-radius:12px;padding:10px 12px;border:1px solid var(--line)}
+form.inline{display:inline}
 .pick-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);min-height:56px}
 .pick-row:hover{border-color:var(--main);text-decoration:none}
 .question{font-size:19px;font-weight:800;line-height:1.7;margin:8px 0 14px}
@@ -242,7 +244,7 @@ i.addEventListener('change',function(){var n=[];for(var k=0;k<i.files.length;k++
 
 NAV = (("home", "/", "ダッシュボード"), ("ideas", "/ideas", "ネタ出し"), ("neta", "/neta", "ネタ帳"),
        ("interview", "/interview", "インタビュー"), ("kakera", "/kakera", "かけら"), ("articles", "/articles", "記事と充足度"), ("drafts", "/drafts", "下書き"), ("kabeuchi", "/kabeuchi", "壁打ち"), ("research", "/research", "リサーチ"),
-       ("reactions", "/reactions", "反応記録"), ("publish", "/publish", "公開準備"), ("check", "/check", "チェッカー"), ("guide", "/guide", "使い方"))
+       ("reactions", "/reactions", "反応記録"), ("publish", "/publish", "公開準備"), ("sns", "/sns", "SNS"), ("check", "/check", "チェッカー"), ("guide", "/guide", "使い方"))
 
 
 def layout(title: str, body: str, active: str = "", flash: str = "", error: bool = False, nav: bool = True,
@@ -1367,7 +1369,7 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 
 # 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
 # web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
-EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth")
+EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth", "web_sns")
 
 
 def home_extra_cards() -> str:

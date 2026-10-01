@@ -16,7 +16,7 @@ SEV_CLASS = {"strong": "b-strong", "warn": "b-warn", "info": "b-info"}
 
 # 公開準備の画面にカードと POST を足す機能ごとのファイル。各モジュールは publish_card(name, text) -> HTML と
 # publish_post(h, path, form) -> bool を持つ。
-CARD_MODULES = ("web_growth",)
+CARD_MODULES = ("web_growth", "web_sns")
 
 
 def _card_modules():

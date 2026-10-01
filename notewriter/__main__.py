@@ -26,6 +26,7 @@
   ./nw rdraft 記事 [--materials M0001,M0002]          リサーチ資料だけから比較表と下書き（資料IDつき・鮮度切れ警告）
   ./nw price 記事|下書き.md   ./nw crosssell 記事   ./nw pace   ./nw published add|list|rm
                                               値付けの目安・記事末尾の案内文・執筆ペース・公開した記事の登録
+  ./nw sns list|draft|new|open|posted|health          SNS（投稿文・Web Intent の URL・投稿の記録・直接宣伝の割合・月1の健康診断）
   ./nw publish check|preview 記事|下書き.md            無料/有料の境界チェック（警告のみ）・note スマホプレビュー
   ./nw style suggest|candidates|adopt|reject           手直しから文体ルールの候補（採用したものだけ追記）
 
@@ -1045,6 +1046,62 @@ def cmd_pace(args) -> None:
         print(f"  {w['start'].strftime('%m/%d')}〜  かけら {w['kakera']:>2}  ネタ {w['neta']:>2}  公開 {w['published']:>2}")
 
 
+def cmd_sns_list(args) -> None:
+    from . import sns
+    for x in sns.list_posts("" if args.all else "下書き"):
+        print(f"--- {x['id']} [{x['platform']}／{x['type']}／{x['status']}{' ' + x['posted_at'] if x['posted_at'] else ''}] {x.get('article', '')}")
+        print(x["text"])
+        for f in [f for f in x.get("flags", []) if not f.startswith("長すぎ")] + sns.length_flags(x["platform"], x["text"]):
+            print(f"    ⚠ {f}")
+    pr = sns.promo_ratio()
+    print(f"\n直近{pr['days']}日: 投稿 {pr['total']} 件・直接宣伝 {pr['promo']} 件（{pr['ratio'] * 100:.0f}%／目安 {pr['max'] * 100:.0f}% 以下）"
+          + ("  ⚠ 直接宣伝が多めです" if pr["over"] else ""))
+    due = sns.health_due()
+    if due:
+        print(f"今月の健康診断がまだです: {'、'.join(due)}（./nw sns health）")
+
+
+def cmd_sns_draft(args) -> None:
+    from . import sns
+    p = sns.prepare(args.article, args.type)
+    if args.show_prompt:
+        print(p["prompt"])
+    print(f"記事「{args.article}」の無料エリアから、型「{args.type}」の投稿文を作らせます（{p['chars']}字。有料部分・かけらは渡しません）。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+    job = sns.run(args.article, args.type, p["confirm_token"])
+    if job.get("status") != "done":
+        _job_failed(_writing(), job)
+    print(f"下書きを {len(job['added'])} 件作りました（./nw sns list）。")
+
+
+def cmd_sns_new(args) -> None:
+    from . import sns
+    x = sns.add_post(args.platform, args.type, args.text if args.text else sys.stdin.read())
+    print(f"{x['id']} を下書きとして保存しました。")
+
+
+def cmd_sns_open(args) -> None:
+    from . import sns
+    x = sns.get_post(args.id)
+    print("次の URL を開くと、本文入力済みの投稿画面が出ます（送信は自分で押してください）:")
+    print(sns.intent_url(x["platform"], x["text"]))
+
+
+def cmd_sns_posted(args) -> None:
+    from . import sns
+    x = sns.mark_posted(args.id, args.date)
+    print(f"{x['id']} を投稿済み（{x['posted_at']}）として記録しました。")
+
+
+def cmd_sns_health(args) -> None:
+    from . import sns
+    rec = sns.save_health(args.month, args.platform, {"bookmarks": args.bookmarks, "profile_clicks": args.profile_clicks,
+                                                      "impressions": args.impressions})
+    print(f"{rec['month']} {rec['platform']} の健康診断を保存しました。")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1262,6 +1319,24 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--article", default=""); a.set_defaults(func=cmd_published_add)
     pd.add_parser("list", help="一覧").set_defaults(func=cmd_published_list)
     a = pd.add_parser("rm", help="登録を削除"); a.add_argument("id"); a.set_defaults(func=cmd_published_rm)
+
+    sn = sub.add_parser("sns", help="SNS 導線（投稿はしない。投稿画面の URL を出すだけ）").add_subparsers(dest="sub", required=True)
+    a = sn.add_parser("list", help="投稿の下書きと直接宣伝の割合"); a.add_argument("--all", action="store_true")
+    a.set_defaults(func=cmd_sns_list)
+    a = sn.add_parser("draft", help="無料エリアから X・Threads の投稿文を作らせる（yes で実行）")
+    a.add_argument("article"); a.add_argument("type"); a.add_argument("--show-prompt", action="store_true")
+    a.set_defaults(func=cmd_sns_draft)
+    a = sn.add_parser("new", help="自分で書いた投稿文を下書きとして保存")
+    a.add_argument("platform"); a.add_argument("type"); a.add_argument("text", nargs="?", default="")
+    a.set_defaults(func=cmd_sns_new)
+    a = sn.add_parser("open", help="Web Intent の URL を表示（開いて送信は自分で）"); a.add_argument("id")
+    a.set_defaults(func=cmd_sns_open)
+    a = sn.add_parser("posted", help="投稿したことを記録"); a.add_argument("id"); a.add_argument("--date", default="")
+    a.set_defaults(func=cmd_sns_posted)
+    a = sn.add_parser("health", help="月1の健康診断を記録")
+    a.add_argument("month", help="YYYY-MM"); a.add_argument("platform")
+    a.add_argument("--bookmarks", default=""); a.add_argument("--profile-clicks", dest="profile_clicks", default="")
+    a.add_argument("--impressions", default=""); a.set_defaults(func=cmd_sns_health)
 
     pb = sub.add_parser("publish", help="公開準備（境界チェック・プレビュー）").add_subparsers(dest="sub", required=True)
     a = pb.add_parser("check", help="無料/有料の境界チェック（警告のみ。警告があれば終了コード1）")

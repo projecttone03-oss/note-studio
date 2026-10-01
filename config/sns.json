@@ -1,0 +1,25 @@
+{
+  "_説明": [
+    "SNS 導線（/sns・./nw sns）の設定。作業フォルダの config/sns.json があれば、キー単位で上書きする。",
+    "投稿は公式の Web Intent（本文入力済みの投稿画面）を開くだけ。最後の送信ボタンは人が押す。X・Threads の投稿 API は使わない。",
+    "intent_url の {text} は、URL エンコードした投稿文に置き換わる。仕様が変わったらここを直す。",
+    "intents_verified: 実機（スマホ・PC）で Web Intent が開くことを確かめたら true にする（false の間は画面に注意を出す）。",
+    "promo_ratio_max: 直近 window_days 日に「投稿した」記録のうち、直接宣伝の割合がこれを超えたら警告する。"
+  ],
+  "platforms": {
+    "x": {"label": "X", "intent_url": "https://x.com/intent/tweet?text={text}", "max_weight": 280},
+    "threads": {"label": "Threads", "intent_url": "https://www.threads.com/intent/post?text={text}", "max_chars": 500}
+  },
+  "intents_verified": false,
+  "types": ["好きになってもらう", "知ってもらう", "リサーチ", "直接宣伝"],
+  "promo_type": "直接宣伝",
+  "promo_ratio_max": 0.1,
+  "window_days": 30,
+  "health_fields": [["bookmarks", "ブックマーク数"], ["profile_clicks", "プロフィールクリック数"], ["impressions", "表示回数"]],
+  "type_hints": {
+    "好きになってもらう": "書き手の人柄・考え方・日々の気づきが伝わる投稿。記事の宣伝はしない。",
+    "知ってもらう": "記事のテーマについて、読者の役に立つ小さな知識や視点を1つだけ。記事の宣伝はしない。",
+    "リサーチ": "読者に問いかけて、困りごとや知りたいことを聞く投稿。",
+    "直接宣伝": "記事の内容と、誰に役立つかを短く伝え、記事へ案内する投稿。"
+  }
+}
