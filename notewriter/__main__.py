@@ -22,6 +22,7 @@
   ./nw draft accept|discard JOB                        改稿の提案を採用／見送り
   ./nw style show|edit|edits                           文体ルール集（edit は $EDITOR か標準入力）と、手直しの記録
   ./nw kabeuchi start 記事 [--tmux]|status|stop 記事   壁打ち（確認実行でツール0を確かめてから claude --remote-control で起動）
+  ./nw publish check|preview 記事|下書き.md            無料/有料の境界チェック（警告のみ）・note スマホプレビュー
   ./nw style suggest|candidates|adopt|reject           手直しから文体ルールの候補（採用したものだけ追記）
 
 作業フォルダが使えない（未初期化・未マウント）ときは終了コード2。check と rules は作業フォルダなしでも動く。
@@ -899,6 +900,38 @@ def cmd_kabeuchi_stop(args) -> None:
     print("止めました。" if KB.stop(args.article) else "起動していませんでした。")
 
 
+def _publish_source(target: str) -> Tuple[str, str]:
+    """記事名か Markdown ファイルのパスから (名前, 本文)。"""
+    p = Path(target)
+    if p.suffix.lower() == ".md" and p.is_file():
+        return p.stem, p.read_text(encoding="utf-8")
+    W = _writing()
+    dp = W.draft_path(target)
+    if not dp.is_file():
+        raise ValueError(f"「{target}」の下書きも、そのファイルも見つかりません。")
+    return target, dp.read_text(encoding="utf-8")
+
+
+def cmd_publish_check(args) -> None:
+    from . import publish as P
+    name, text = _publish_source(args.target)
+    fs = P.check_boundary(text)
+    if not fs:
+        print(f"{name}: 境界チェックの警告はありません。")
+    for f in fs:
+        print(f"[{P.SEVERITY[f['severity']]}] {f['line'] or '-'}行目: {f['message']}")
+    if any(f["severity"] != "info" for f in fs):
+        sys.exit(1)
+
+
+def cmd_publish_preview(args) -> None:
+    from . import publish as P
+    name, text = _publish_source(args.target)
+    out = Path(args.out) if args.out else store.vault() / "exports" / f"{_writing().slug(name)}-preview.html"
+    store.atomic_write(out, P.preview_page(text, name, args.price or "", P.check_boundary(text)))
+    print(f"プレビューを書き出しました: {out}（ブラウザで開いてください。下書きの本文を含むので扱いに注意）")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1096,6 +1129,13 @@ def build_parser() -> argparse.ArgumentParser:
     kb.add_parser("status", help="記事ごとの状態").set_defaults(func=cmd_kabeuchi_status)
     a = kb.add_parser("stop", help="tmux で常駐中のセッションを止める"); a.add_argument("article")
     a.set_defaults(func=cmd_kabeuchi_stop)
+
+    pb = sub.add_parser("publish", help="公開準備（境界チェック・プレビュー）").add_subparsers(dest="sub", required=True)
+    a = pb.add_parser("check", help="無料/有料の境界チェック（警告のみ。警告があれば終了コード1）")
+    a.add_argument("target", help="記事名 または 下書き.md"); a.set_defaults(func=cmd_publish_check)
+    a = pb.add_parser("preview", help="note スマホプレビューの HTML を書き出す（既定は作業フォルダの exports/）")
+    a.add_argument("target"); a.add_argument("--price", default=""); a.add_argument("--out", default="")
+    a.set_defaults(func=cmd_publish_preview)
 
     st = sub.add_parser("style", help="文体ルール集").add_subparsers(dest="sub", required=True)
     st.add_parser("show", help="表示").set_defaults(func=cmd_style_show)

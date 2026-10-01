@@ -235,7 +235,7 @@ i.addEventListener('change',function(){var n=[];for(var k=0;k<i.files.length;k++
 
 NAV = (("home", "/", "ダッシュボード"), ("ideas", "/ideas", "ネタ出し"), ("neta", "/neta", "ネタ帳"),
        ("kakera", "/kakera", "かけら"), ("articles", "/articles", "記事と充足度"), ("drafts", "/drafts", "下書き"), ("kabeuchi", "/kabeuchi", "壁打ち"), ("research", "/research", "リサーチ"),
-       ("reactions", "/reactions", "反応記録"), ("check", "/check", "チェッカー"), ("guide", "/guide", "使い方"))
+       ("reactions", "/reactions", "反応記録"), ("publish", "/publish", "公開準備"), ("check", "/check", "チェッカー"), ("guide", "/guide", "使い方"))
 
 
 def layout(title: str, body: str, active: str = "", flash: str = "", error: bool = False, nav: bool = True,
@@ -1359,7 +1359,7 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 
 # 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
 # web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
-EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi")
+EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish")
 
 
 def _extensions(path: str):
@@ -1767,6 +1767,24 @@ class Handler(BaseHTTPRequestHandler):
         self._headers(status, length=len(data))
         self.wfile.write(data)
 
+    def _send_raw(self, r: dict) -> None:
+        """{"body": str|bytes, "ctype": ..., "filename": 任意}。ファイル名があれば保存（ダウンロード）にする。"""
+        data = r["body"].encode("utf-8") if isinstance(r["body"], str) else r["body"]
+        self.send_response(200)
+        self.send_header("Content-Type", r.get("ctype") or "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        if r.get("filename"):
+            self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + quote(r["filename"]))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy",
+                         "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; "
+                         "form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+        self.end_headers()
+        self.wfile.write(data)
+
     def _page(self, title: str, body: str, active: str = "", status: int = 200, flash: str = "", error: bool = False,
               nav: bool = True, head: str = "") -> None:
         self._send(layout(title, body, active, flash, error, nav, head), status)
@@ -1890,6 +1908,9 @@ class Handler(BaseHTTPRequestHandler):
             if page is None:
                 for mod in _extensions(path):
                     r = mod.route_get(path, qs)
+                    if isinstance(r, dict):  # 画面の枠なしで返す（プレビュー・画像のダウンロード）
+                        self._send_raw(r)
+                        return
                     if r:
                         page, title, active, head = r
                         break
