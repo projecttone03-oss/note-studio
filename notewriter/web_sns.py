@@ -37,7 +37,8 @@ def post_card(x: dict) -> str:
     posted = x["status"] == "投稿済み"
     try:
         url = S.intent_url(x["platform"], x["text"])
-        open_btn = (f'<a class="btn primary" href="{e(url)}" target="_blank" rel="noopener noreferrer">{e(label)} で開く（送信は自分で）</a>')
+        open_btn = (f'<a class="btn primary" href="{e(url)}" target="_blank" rel="noopener noreferrer" '
+                    f'title="本文入力済みの投稿画面を開きます。送信は自分で押します">{e(label)} で開く</a>')
     except ValueError as ex:
         open_btn = f'<span class="flag">⚠ {e(ex)}</span>'
     mark = ("" if posted else
@@ -48,6 +49,7 @@ def post_card(x: dict) -> str:
 <span class="badge {"b-ok" if posted else "b-st"}">{e(x["status"])}{" " + e(x["posted_at"]) if posted else ""}</span>
 {"<span class=small>" + e(x["article"]) + "</span>" if x.get("article") else ""}<span class="small muted">{e(count)}</span></div>
 <p class="snstext">{lines_html(x["text"])}</p>{flags}
+<p class="small muted">「開く」は投稿画面を出すだけです。送信ボタンは自分で押し、そのあと「投稿した」を押します。</p>
 <div class="btnrow">{open_btn}{mark}</div>
 <details><summary>直す・削除</summary><form method="post" action="/sns/{e(x["id"])}">
 <textarea name="text" rows="5">{e(x["text"])}</textarea><label class="f">型</label><select name="type">{_type_options(x["type"])}</select>

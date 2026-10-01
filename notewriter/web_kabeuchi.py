@@ -16,20 +16,20 @@ def page_kabeuchi() -> str:
     has_tmux = bool(KB.tmux_path())
     for r in KB.overview():
         pf = r["preflight"]
-        pf_html = (f'<span class="badge b-ok">確認済み</span><div class="small muted">{e(pf["at"].replace("T", " "))}・ツール {len(pf.get("tools") or [])} 個</div>'
-                   if pf else '<span class="muted small">まだ</span>')
+        pf_html = (f'<span class="badge b-ok">確認済み</span>{e(pf["at"].replace("T", " "))}・ツール {len(pf.get("tools") or [])} 個'
+                   if pf else 'まだ')
         state = '<span class="badge b-ok">起動中</span>' if r["running"] else '<span class="badge">停止</span>'
         url = "/kabeuchi/" + quote(r["article"], safe="")
         if r["running"]:
             act = (f'<form method="post" action="{e(url)}/stop" data-confirm="壁打ちセッションを止めます。よいですか？">'
                    f'<button class="btn sm ng">止める</button></form>')
         else:
-            act = (f'<form method="post" action="{e(url)}/start"><button class="btn sm primary"'
+            act = (f'<form method="post" action="{e(url)}/start"><button class="btn primary"'
                    f'{"" if has_tmux else " disabled"}>確認実行して起動</button></form>')
-        rows.append(f'<tr><td><b>{e(r["article"])}</b><div class="small muted">スマホでの名前: {e(r["session"])}</div></td>'
-                    f'<td>{state}</td><td>{pf_html}</td><td>{act}</td></tr>')
-    table = (f'<div class="tablewrap"><table><tr><th>記事</th><th>状態</th><th>起動前の確認</th><th></th></tr>{"".join(rows)}</table></div>'
-             if rows else '<p class="muted">まだ記事がありません。<a href="/articles">記事と区間</a>を登録してください。</p>')
+        rows.append(f'<div class="kcard"><div class="head"><b class="kid">{e(r["article"])}</b>{state}</div>'
+                    f'<p class="small">スマホでの名前: <b>{e(r["session"])}</b>／起動前の確認: {pf_html}</p>'
+                    f'<div class="btnrow">{act}</div></div>')
+    table = "".join(rows) if rows else '<p class="muted">まだ記事がありません。<a href="/articles">記事と区間</a>を登録してください。</p>'
     no_tmux = ("" if has_tmux else
                '<div class="note strong">この機械に tmux が見つからないため、画面からは起動できません。'
                '端末で <code>./nw kabeuchi start 記事名</code> を実行すると、その端末で起動します（VPS では tmux を入れてください）。</div>')
