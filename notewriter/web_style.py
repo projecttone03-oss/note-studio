@@ -50,7 +50,7 @@ def page_candidates(qs: dict) -> str:
 <div class="card"><h2>手直しの記録から候補を出す</h2>
 <p class="small">AI の段落を人が直した記録（新しいものから最大 {e(S.config()["edits_max"])} 組）を、ツールなしの Claude に渡します。</p>
 <form method="post" action="/style/candidates/confirm"><button class="btn primary">確認画面へ</button></form>
-<p class="small"><a href="/books">参考書籍から候補を出す</a></p></div>
+<div class="btnrow"><a class="btn" href="/books">参考書籍から候補を出す</a></div></div>
 <div class="card"><h2>候補</h2><p>{tabs}</p>{cards}</div>"""
 
 

@@ -29,6 +29,7 @@
   ./nw sns list|draft|new|open|posted|health          SNS（投稿文・Web Intent の URL・投稿の記録・直接宣伝の割合・月1の健康診断）
   ./nw thumb 記事 [--title T] [--keyword K]          サムネイル（SVG・HTML、playwright か Chromium があれば PNG）
   ./nw publish check|preview 記事|下書き.md            無料/有料の境界チェック（警告のみ）・note スマホプレビュー
+  ./nw book add|list|find|analyze                     参考書籍（PDF の文字はアプリが取り出し、候補は人が採用）
   ./nw style suggest|candidates|adopt|reject           手直しから文体ルールの候補（採用したものだけ追記）
 
 作業フォルダが使えない（未初期化・未マウント）ときは終了コード2。check と rules は作業フォルダなしでも動く。
@@ -1120,6 +1121,43 @@ def cmd_thumb(args) -> None:
         print("PNG を作る道具（playwright か Chromium）が見つからないため、SVG と HTML だけ作りました。")
 
 
+def cmd_book_add(args) -> None:
+    from . import books
+    p = Path(args.file)
+    b = books.add_book(p.name, p.read_bytes(), args.title)
+    print(f"{b['id']}「{b['title']}」を取り込みました（{b['pages']}ページ・{b['extractor']}）。")
+
+
+def cmd_book_list(args) -> None:
+    from . import books
+    items = books.list_books()
+    if not items:
+        print("（参考書籍はまだありません）")
+    for b in items:
+        print(f"{b['id']}  {b['pages']}ページ  {b['title']}")
+
+
+def cmd_book_find(args) -> None:
+    from . import books
+    for page, text in books.find(args.id, args.words):
+        print(f"p.{page}  …{text}…")
+
+
+def cmd_book_analyze(args) -> None:
+    from . import books
+    p = books.prepare(args.id, args.start, args.end, args.focus)
+    if args.show_prompt:
+        print(p["prompt"])
+    print(f"{args.id} の p.{args.start}〜{args.end} の文字から、書き方の手法を候補として出させます（{p['chars']}字）。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+    job = books.run(args.id, args.start, args.end, args.focus, p["confirm_token"])
+    if job.get("status") != "done":
+        _job_failed(_writing(), job)
+    print(f"候補を {len(job['added'])} 件追加しました（./nw style candidates で確認し、adopt / reject）。")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1360,6 +1398,17 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("article"); a.add_argument("--title", default=""); a.add_argument("--keyword", default="")
     a.add_argument("--templates", default="", help="ひな形の名前（カンマ区切り。省略ですべて）")
     a.add_argument("--no-png", action="store_true"); a.set_defaults(func=cmd_thumb)
+
+    bk = sub.add_parser("book", help="参考書籍（PDF から文体ルールの候補）").add_subparsers(dest="sub", required=True)
+    a = bk.add_parser("add", help="PDF か .txt を取り込む（文字はアプリが取り出す）")
+    a.add_argument("file"); a.add_argument("--title", default=""); a.set_defaults(func=cmd_book_add)
+    bk.add_parser("list", help="一覧").set_defaults(func=cmd_book_list)
+    a = bk.add_parser("find", help="キーワードが出てくるページ"); a.add_argument("id"); a.add_argument("words", nargs="+")
+    a.set_defaults(func=cmd_book_find)
+    a = bk.add_parser("analyze", help="ページを選んで文体ルールの候補を出させる（yes で実行）")
+    a.add_argument("id"); a.add_argument("start", type=int); a.add_argument("end", type=int)
+    a.add_argument("--focus", default=""); a.add_argument("--show-prompt", action="store_true")
+    a.set_defaults(func=cmd_book_analyze)
 
     pb = sub.add_parser("publish", help="公開準備（境界チェック・プレビュー）").add_subparsers(dest="sub", required=True)
     a = pb.add_parser("check", help="無料/有料の境界チェック（警告のみ。警告があれば終了コード1）")

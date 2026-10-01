@@ -33,6 +33,7 @@ DEFAULT_PORT = 8766
 NOTICE_FILE = "notice_ack.json"
 NOTICE_VERSION = 1
 MAX_BODY = 8 * 1024 * 1024  # 1リクエストの上限（アップロード込み）
+MAX_BODY_BOOKS = 64 * 1024 * 1024  # 参考書籍（PDF）の取り込みだけ大きくする
 TAILSCALE_NETS = (ipaddress.ip_network("100.64.0.0/10"), ipaddress.ip_network("fd7a:115c:a1e0::/48"))
 SEVERITY_LABEL = {"strong": "強い警告", "warn": "警告", "info": "参考"}
 SEVERITY_ORDER = {"strong": 0, "warn": 1, "info": 2}
@@ -1370,7 +1371,7 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 
 # 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
 # web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
-EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth", "web_sns", "web_thumb")
+EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth", "web_sns", "web_thumb", "web_books")
 
 
 def home_extra_cards() -> str:
@@ -1955,7 +1956,8 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length") or 0)
         except ValueError:
             length = -1
-        if length < 0 or length > MAX_BODY:
+        limit = MAX_BODY_BOOKS if urlparse(self.path).path == "/books/upload" else MAX_BODY
+        if length < 0 or length > limit:
             self._send("too large", 413)
             return
         body = self.rfile.read(length)

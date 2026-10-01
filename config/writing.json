@@ -47,11 +47,13 @@
     "mcp__*"
   ],
   "style_candidates": {
-    "_説明": "文体ルール候補（./nw style suggest・/style/candidates）。copy_max_chars 字以上、材料の文がそのまま続く候補は直すまで採用できない。",
+    "_説明": "文体ルール候補（./nw style suggest・/style/candidates）。copy_max_chars 字以上、材料の文がそのまま続く候補は直すまで採用できない。 参考書籍の分析は book_max_chars 字までのページを渡す。",
     "edits_max": 40,
     "edits_max_chars": 20000,
     "max_candidates": 8,
-    "copy_max_chars": 20
+    "copy_max_chars": 20,
+    "book_max_chars": 20000,
+    "book_max_candidates": 8
   },
   "research_max_chars": 60000
 }
