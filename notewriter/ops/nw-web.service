@@ -1,0 +1,20 @@
+# 【未検証】notewriter の画面を常駐させる systemd のユーザーサービス（ひな形）。
+# 置き場所: ~/.config/systemd/user/nw-web.service
+#   systemctl --user daemon-reload
+#   systemctl --user start nw-web.service   （暗号化フォルダをマウントしてから。自動起動はしない＝パスワードを保存しないため）
+# ログには本文が出ないようにしてある（画面のログはメソッドとパスの先頭だけ）。journald の保存期間も短くするとよい。
+[Unit]
+Description=notewriter web (Tailscale only)
+After=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+ExecStart=%h/note-studio/notewriter/ops/nw_start.sh
+Restart=on-failure
+RestartSec=10
+UMask=0077
+PrivateTmp=true
+LimitCORE=0
+
+[Install]
+WantedBy=default.target
