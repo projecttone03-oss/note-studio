@@ -27,6 +27,7 @@
   ./nw price 記事|下書き.md   ./nw crosssell 記事   ./nw pace   ./nw published add|list|rm
                                               値付けの目安・記事末尾の案内文・執筆ペース・公開した記事の登録
   ./nw sns list|draft|new|open|posted|health          SNS（投稿文・Web Intent の URL・投稿の記録・直接宣伝の割合・月1の健康診断）
+  ./nw thumb 記事 [--title T] [--keyword K]          サムネイル（SVG・HTML、playwright か Chromium があれば PNG）
   ./nw publish check|preview 記事|下書き.md            無料/有料の境界チェック（警告のみ）・note スマホプレビュー
   ./nw style suggest|candidates|adopt|reject           手直しから文体ルールの候補（採用したものだけ追記）
 
@@ -1102,6 +1103,23 @@ def cmd_sns_health(args) -> None:
     print(f"{rec['month']} {rec['platform']} の健康診断を保存しました。")
 
 
+def cmd_thumb(args) -> None:
+    from . import published, thumbnail as T
+    W = _writing()
+    W._article(args.article)
+    title = args.title
+    if not title:
+        p = W.draft_path(args.article)
+        title = published.title_of(p.read_text(encoding="utf-8"), args.article) if p.is_file() else args.article
+    names = [x for x in (args.templates or "").split(",") if x] or [t["name"] for t in T.config()["templates"]]
+    out = T.generate(args.article, title, names, args.keyword or None, png=not args.no_png)
+    for o in out:
+        print(f"{o['name']}: {o['svg']}  {o['html']}  {o['png'] or '（PNG なし）'}")
+    print(f"保存先: {T._dir(args.article)}")
+    if not T.png_engine():
+        print("PNG を作る道具（playwright か Chromium）が見つからないため、SVG と HTML だけ作りました。")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1337,6 +1355,11 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("month", help="YYYY-MM"); a.add_argument("platform")
     a.add_argument("--bookmarks", default=""); a.add_argument("--profile-clicks", dest="profile_clicks", default="")
     a.add_argument("--impressions", default=""); a.set_defaults(func=cmd_sns_health)
+
+    a = sub.add_parser("thumb", help="サムネイル（1280×670）を作る。PNG は playwright か Chromium があれば")
+    a.add_argument("article"); a.add_argument("--title", default=""); a.add_argument("--keyword", default="")
+    a.add_argument("--templates", default="", help="ひな形の名前（カンマ区切り。省略ですべて）")
+    a.add_argument("--no-png", action="store_true"); a.set_defaults(func=cmd_thumb)
 
     pb = sub.add_parser("publish", help="公開準備（境界チェック・プレビュー）").add_subparsers(dest="sub", required=True)
     a = pb.add_parser("check", help="無料/有料の境界チェック（警告のみ。警告があれば終了コード1）")

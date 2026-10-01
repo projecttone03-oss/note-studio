@@ -1,0 +1,19 @@
+{
+  "_説明": [
+    "サムネイル（/thumbnails・./nw thumb）の設定。1280×670px（1.91:1）。作業フォルダの config/thumbnails.json があれば、キー単位で上書きする。",
+    "templates: ひな形。layout は center（中央に大きく）・band（帯）・split（左に色面）。色は自由に変えてよい。",
+    "PNG は Python の playwright があればそれで、なければ chrome_path（Chromium/Chrome の実行ファイル）があればそれで作る。どちらもなければ HTML と SVG だけ作る。",
+    "background_image: 作業フォルダ内の画像ファイル（AI で作った背景など）を指定すると、背景に敷く（任意）。",
+    "background_provider: 将来 AI 画像生成をつなぐための名前（notewriter/thumbnail.py の BACKGROUND_PROVIDERS に登録）。空なら使わない。"
+  ],
+  "templates": [
+    {"name": "center", "label": "中央・大きく", "layout": "center", "bg": "#fff7dc", "fg": "#3b4450", "accent": "#ff8a65"},
+    {"name": "band", "label": "帯", "layout": "band", "bg": "#e3f6f7", "fg": "#ffffff", "accent": "#2a8f9c"},
+    {"name": "split", "label": "左に色面", "layout": "split", "bg": "#ffffff", "fg": "#3b4450", "accent": "#5aa8f0"}
+  ],
+  "font_family": "'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP','Noto Sans CJK JP','Yu Gothic',sans-serif",
+  "author": "",
+  "chrome_path": "",
+  "background_image": "",
+  "background_provider": ""
+}

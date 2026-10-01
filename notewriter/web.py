@@ -224,6 +224,7 @@ pre.send{white-space:pre-wrap;word-break:break-word;background:#fbfdfe;border:2p
 .pbar.n{background:var(--sun)}.pbar.p{background:var(--sky)}
 .snstext{font-size:16px;background:#fbfdfe;border-radius:12px;padding:10px 12px;border:1px solid var(--line)}
 form.inline{display:inline}
+.thumb{margin:0 0 16px}.thumb img{width:100%;height:auto;border-radius:12px;border:1px solid var(--line);display:block;background:#fff}
 .pick-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);min-height:56px}
 .pick-row:hover{border-color:var(--main);text-decoration:none}
 .question{font-size:19px;font-weight:800;line-height:1.7;margin:8px 0 14px}
@@ -1369,7 +1370,7 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 
 # 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
 # web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
-EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth", "web_sns")
+EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth", "web_sns", "web_thumb")
 
 
 def home_extra_cards() -> str:
