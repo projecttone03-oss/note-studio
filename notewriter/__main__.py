@@ -24,6 +24,8 @@
   ./nw kabeuchi start 記事 [--tmux]|status|stop 記事   壁打ち（確認実行でツール0を確かめてから claude --remote-control で起動）
   ./nw interview 記事                                 1問ずつ答えると、かけらとして保存（空いている観点と [要追加] から質問）
   ./nw rdraft 記事 [--materials M0001,M0002]          リサーチ資料だけから比較表と下書き（資料IDつき・鮮度切れ警告）
+  ./nw price 記事|下書き.md   ./nw crosssell 記事   ./nw pace   ./nw published add|list|rm
+                                              値付けの目安・記事末尾の案内文・執筆ペース・公開した記事の登録
   ./nw publish check|preview 記事|下書き.md            無料/有料の境界チェック（警告のみ）・note スマホプレビュー
   ./nw style suggest|candidates|adopt|reject           手直しから文体ルールの候補（採用したものだけ追記）
 
@@ -994,6 +996,55 @@ def cmd_interview(args) -> None:
             lines.append(line)
 
 
+def cmd_price(args) -> None:
+    from . import pricing
+    _, text = _publish_source(args.target)
+    r = pricing.suggest(text)
+    print(f"目安: {r['low']}〜{r['high']}円（{r['summary']}）")
+    for x in r["reasons"]:
+        print("  " + x)
+    print("文字数と情報密度から機械的に出した目安です。価格は自分で決めてください。")
+
+
+def cmd_published_add(args) -> None:
+    from . import published
+    x = published.add(title=args.title, url=args.url, price=args.price, tags=args.tags, published=args.published,
+                      summary=args.summary, article=args.article)
+    print(f"{x['id']} として登録しました: {x['title']}")
+
+
+def cmd_published_list(args) -> None:
+    from . import published
+    items = published.list_published()
+    if not items:
+        print("（公開した記事の登録はまだありません）")
+    for x in items:
+        price = "無料" if not x["price"] else f"{x['price']}円"
+        print(f"{x['id']}  {x['published']}  {price}  {x['title']}  {x.get('url', '')}  [{'、'.join(x.get('tags') or [])}]")
+
+
+def cmd_published_rm(args) -> None:
+    from . import published
+    published.delete(args.id)
+    print(f"{args.id} の登録を削除しました。")
+
+
+def cmd_crosssell(args) -> None:
+    from . import published
+    name, text = _publish_source(args.target)
+    cs = published.crosssell_text(published.title_of(text, name), exclude_article=name)
+    print(cs or "近い公開済みの記事が見つかりませんでした（./nw published add で登録・タグを付けると出ます）。")
+
+
+def cmd_pace(args) -> None:
+    from . import pace
+    s = pace.summary()
+    print(s["headline"])
+    print(s["total"])
+    for w in s["weeks"]:
+        print(f"  {w['start'].strftime('%m/%d')}〜  かけら {w['kakera']:>2}  ネタ {w['neta']:>2}  公開 {w['published']:>2}")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1198,6 +1249,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     a = sub.add_parser("interview", help="インタビュー（1問ずつ答えると、かけらとして保存）")
     a.add_argument("article"); a.set_defaults(func=cmd_interview)
+
+    a = sub.add_parser("price", help="値付けの目安（文字数と情報密度から。最終決定は人）")
+    a.add_argument("target", help="記事名 または 下書き.md"); a.set_defaults(func=cmd_price)
+    a = sub.add_parser("crosssell", help="記事末尾の案内文（公開済みの記事から近いもの）を表示する")
+    a.add_argument("target"); a.set_defaults(func=cmd_crosssell)
+    sub.add_parser("pace", help="執筆ペース（週ごとのかけら・ネタ・公開の数）").set_defaults(func=cmd_pace)
+    pd = sub.add_parser("published", help="公開した記事の登録（クロスセル・値付けの参考）").add_subparsers(dest="sub", required=True)
+    a = pd.add_parser("add", help="登録する")
+    a.add_argument("title"); a.add_argument("--url", default=""); a.add_argument("--price", default="0")
+    a.add_argument("--tags", default=""); a.add_argument("--published", default=""); a.add_argument("--summary", default="")
+    a.add_argument("--article", default=""); a.set_defaults(func=cmd_published_add)
+    pd.add_parser("list", help="一覧").set_defaults(func=cmd_published_list)
+    a = pd.add_parser("rm", help="登録を削除"); a.add_argument("id"); a.set_defaults(func=cmd_published_rm)
 
     pb = sub.add_parser("publish", help="公開準備（境界チェック・プレビュー）").add_subparsers(dest="sub", required=True)
     a = pb.add_parser("check", help="無料/有料の境界チェック（警告のみ。警告があれば終了コード1）")

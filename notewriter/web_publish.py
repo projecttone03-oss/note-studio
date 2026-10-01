@@ -14,8 +14,14 @@ from .web import e, lines_html
 PREFIXES = ("/publish",)
 SEV_CLASS = {"strong": "b-strong", "warn": "b-warn", "info": "b-info"}
 
-# 公開準備の画面に足すカード（記事名 -> HTML）。機能ごとのファイルがここに登録する。
-EXTRA_CARDS = []
+# 公開準備の画面にカードと POST を足す機能ごとのファイル。各モジュールは publish_card(name, text) -> HTML と
+# publish_post(h, path, form) -> bool を持つ。
+CARD_MODULES = ("web_growth",)
+
+
+def _card_modules():
+    import importlib
+    return [importlib.import_module("notewriter." + n) for n in CARD_MODULES]
 
 
 def purl(name: str, rest: str = "") -> str:
@@ -76,7 +82,7 @@ def page_index() -> str:
 def page_article(name: str, qs: dict) -> str:
     text = draft_text(name)
     price = (qs.get("price") or [""])[0]
-    extra = "".join(f(name, text) for f in EXTRA_CARDS)
+    extra = "".join(m.publish_card(name, text) for m in _card_modules())
     return f"""<p class="small"><a href="/publish">公開準備</a> ／ <a href="/drafts/{e(quote(name, safe=""))}">下書き</a></p>
 <h1>{e(name)} の公開準備</h1>
 <div class="card"><h2>note スマホプレビュー</h2>
@@ -124,11 +130,7 @@ def post(h, path: str, form) -> bool:
                                    f'{boundary_card(text)}<div class="card"><h2>チェックした本文</h2>'
                                    f'<div class="small">{lines_html(text[:3000])}</div></div>', "publish")
         return True
-    for f in POST_HANDLERS:
-        if f(h, path, form):
+    for m in _card_modules():
+        if m.publish_post(h, path, form):
             return True
     return False
-
-
-# 公開準備の画面に POST を足す機能（h, path, form -> 処理したら True）
-POST_HANDLERS = []

@@ -1,0 +1,18 @@
+{
+  "_説明": [
+    "値付け支援（公開準備の画面・./nw price）の目安。最終的な価格は人が決める。作業フォルダの config/pricing.json があれば、キー単位で上書きする。",
+    "bands: 有料エリアの文字数（区切り行がなければ全文）ごとの価格帯（円）。max_chars が null の帯は上限なし。",
+    "density: 有料エリア 1000字あたりの数（numbers・lists）と、表・出典URL・見出しの数がこの値以上なら「情報密度が高い」点として数える。",
+    "密度の点が shift_up_score 以上なら1つ上の帯、shift_down_score 以下なら1つ下の帯を目安にする。"
+  ],
+  "bands": [
+    {"max_chars": 3000, "range": [100, 300]},
+    {"max_chars": 6000, "range": [300, 500]},
+    {"max_chars": 10000, "range": [500, 980]},
+    {"max_chars": 18000, "range": [980, 1480]},
+    {"max_chars": null, "range": [1480, 2980]}
+  ],
+  "density": {"numbers_per_1000": 8, "lists_per_1000": 4, "tables": 1, "sources": 3, "headings": 4},
+  "shift_up_score": 4,
+  "shift_down_score": 1
+}

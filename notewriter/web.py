@@ -219,6 +219,9 @@ pre.send{white-space:pre-wrap;word-break:break-word;background:#fbfdfe;border:2p
 .flag{font-size:13px;font-weight:700;color:var(--warm-dk);background:var(--warm-weak);border-radius:10px;padding:4px 10px;margin:6px 0 0}
 .sechead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:3px solid var(--main-weak);padding-bottom:4px;margin-top:22px}
 .example{background:var(--main-weak);border-radius:14px;padding:12px 16px;margin:0 0 12px;border-left:6px solid var(--main)}
+.pace td{vertical-align:middle;white-space:nowrap}.pace td:not(:first-child){min-width:90px}
+.pbar{display:inline-block;height:10px;border-radius:99px;margin-right:6px;vertical-align:middle;background:var(--main)}
+.pbar.n{background:var(--sun)}.pbar.p{background:var(--sky)}
 .pick-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);min-height:56px}
 .pick-row:hover{border-color:var(--main);text-decoration:none}
 .question{font-size:19px;font-weight:800;line-height:1.7;margin:8px 0 14px}
@@ -629,6 +632,7 @@ def page_home() -> str:
 <textarea name="body" rows="3" placeholder="思いついたことを1行でも" required></textarea>
 <div class="btnrow"><button class="btn warm">ネタを保存</button></div></form>
 <p class="small">未整理のネタ <b>{st.get("neta_unsorted", 0)}</b> 件 → <a href="/neta">ネタ帳を開く</a></p></div>
+{home_extra_cards()}
 {ideas_home_card()}
 {research_home_card()}
 <div class="card"><h2>使用状況</h2><div>{by_status or '<span class="muted">—</span>'}</div></div>
@@ -1363,7 +1367,13 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 
 # 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
 # web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
-EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview")
+EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth")
+
+
+def home_extra_cards() -> str:
+    """ダッシュボードに足すカード（機能ごとのファイルの home_card）。"""
+    from . import web_growth
+    return web_growth.home_card()
 
 
 def _extensions(path: str):
