@@ -46,25 +46,22 @@ notestudioの段階3〜6（執筆・レビュー・公開準備・分析）は�
 - nw の変更は `./ns sync` ではなく、プルリクエストのマージで取り込む（sync は inbox/*.json しか受け取らない）。
 - かけら・下書きなどの実データは、作業フォルダ（既定 `workspace/`、本番は gocryptfs の復号ビュー）以外に置かない。commit もしない。
 
-### notewriter 開発の引き継ぎメモ（2026-10-01 更新）
+### notewriter 開発の引き継ぎメモ（2026-10-01 更新・ブランチ nw-drafting）
 
-**できているもの**: 第1段階（かけら管理・コンプライアンスチェッカー）、リサーチ・ネタ出し・反応記録、
-第2段階の前半＝体験談の下書き作成・段落の書き直し提案・版履歴・手直しの記録（`notewriter/writing.py`・`notewriter/web_writing.py`・
-`config/writing.json`・`config/writing_prompts/`。画面 `/drafts` `/style`、CLI `./nw draft` `./nw style`）。
+**できているもの**: SPEC.md の機能1〜14をひととおり（第1〜第4段階）。
+- 画面は機能ごとに `notewriter/web_*.py` に分け、`web.py` の `EXTENSIONS` から振り分けるだけ（各モジュールは
+  `PREFIXES`・`route_get`・`post`・`back`）。公開準備の画面に足すカードは `web_publish.CARD_MODULES`。
+- ツールなしの Claude を裏で1回呼ぶ処理は `notewriter/jobs.py`（確認トークン・同時実行の排他・init 検証）を使う。
+  文体候補 `style_learn.py`・参考書籍 `books.py`・リサーチ型の下書き `research_writing.py`・SNS 投稿文 `sns.py`。
+- 壁打ちは `kabeuchi.py`（`claude_runner.safety_flags` を確認実行と起動で共通に使う）。
+- VPS 用の手順書とスクリプトは `notewriter/ops/`（**未検証**。bash -n のみ）。
 
-**次に作るもの（第2段階の後半＝2b）**: SPEC.md 機能4の「壁打ち」と、機能6の「文体ルール候補」。
-- 壁打ち: 記事ごとに1つ、`claude --remote-control <名前>`（対話セッション方式）で起動するランチャー。サーバーモード
-  `claude remote-control` は使わない。起動フラグは本文確定と同じく全ツール拒否（`--tools ""`・`--disallowedTools`・
-  PreToolUse フック `notewriter/hooks/tool_guard.py`・`--strict-mcp-config`・`--setting-sources ""`）。`--bare` は使わない。
-  - 対話セッションでは system/init を直接読めないので、起動前に**同じフラグで `-p` の確認実行**をして、init のツール一覧が
-    空・MCPなしであることを確かめてから起動する（SPEC.md 絶対4）。
-  - かけら等の材料はコマンドライン引数に入れない。作業フォルダ（暗号化境界）の中にファイルを作り
-    `--append-system-prompt-file` で渡す（`claude --help` で存在を確認済み）。
-  - 対話セッションの履歴は `~/.claude/projects/` に残る（`--no-session-persistence` は -p 専用）。VPS ではこのフォルダも
-    暗号化境界に入れる必要がある旨を、画面とREADMEに明記する。
-  - 初回起動時の Remote Control の保存期間と Trusted Devices の案内（SPEC.md 絶対6）は既存のお知らせ画面と整合させる。
-- 文体ルール候補: `style/edits.jsonl`（AIの段落と人の手直しの組）をツールなしの Claude に渡し、ルールの**候補**を出させる。
-  人が採用/却下したものだけ `style/rules.md` に追記する（自動反映しない）。
+**まだ確かめていないこと（Mac・VPS で人が確認する）**:
+- 本物の Claude での確認: 壁打ちの起動（`claude --remote-control` のフラグ名・`--append-system-prompt-file`）、
+  文体候補・書籍分析・リサーチ型の下書き・SNS 投稿文の出力の質。クラウドの claude はログインしていない。
+- X・Threads の Web Intent の実機確認（済んだら `config/sns.json` の `intents_verified` を true に）。
+- note の CSV の列名（`config/reactions_csv.json`）。Mac での `tools/pdftool` による書籍の取り込み。
+- `notewriter/ops/` のスクリプトの実行。
 
 **クラウドでの注意**:
 - Mac の Python は **3.9.6**。クラウドの Python は新しいので、3.10 以降の書き方（`match`、実行時の `X | Y` 型、
