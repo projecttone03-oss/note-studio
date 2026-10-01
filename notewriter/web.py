@@ -94,17 +94,17 @@ def _compliance():
 
 
 CSS = """
-:root{--ink:#3b4450;--sub:#7b8594;--line:#e4ebf0;--bg:#f2f6f9;--card:#fff;
---main:#39b8c6;--main-dk:#2a8f9c;--main-weak:#e3f6f7;--sky:#5aa8f0;--sky-weak:#e7f2fe;
---warm:#ff8a65;--warm-dk:#e0673f;--warm-weak:#fff0ea;--sun:#ffc53d;--sun-weak:#fff7dc;
+:root{--ink:#2f3843;--sub:#5d6876;--line:#dfe7ed;--bg:#f2f6f9;--card:#fff;
+--main:#2a9fad;--main-dk:#1c6f7a;--main-weak:#e3f6f7;--sky:#2f7fd0;--sky-weak:#e7f2fe;
+--warm:#d9603a;--warm-dk:#b04a28;--warm-weak:#fff0ea;--sun:#ffc53d;--sun-weak:#fff7dc;
 --ok:#3bb77e;--ok-weak:#e5f7ee;--ng:#e5534b;--ng-weak:#fdecea;--shadow:0 4px 16px rgba(40,90,120,.10)}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.8 -apple-system,BlinkMacSystemFont,"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif;word-break:break-word}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.8 -apple-system,BlinkMacSystemFont,"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif;word-break:break-word}
 a{color:var(--main-dk);text-decoration:none}a:hover{text-decoration:underline}
 header{background:linear-gradient(120deg,var(--main),var(--sky));color:#fff;box-shadow:0 2px 10px rgba(40,90,120,.18)}
 .bar{max-width:1080px;margin:0 auto;padding:12px 16px 4px;display:flex;align-items:center;gap:10px}
-.brand{font-weight:800;font-size:18px;letter-spacing:.04em;color:#fff}
+.brand{font-weight:800;font-size:18px;letter-spacing:.04em;color:#fff}.brand:hover{text-decoration:none}
 .brand small{font-weight:600;font-size:11px;opacity:.9;margin-left:6px}
 nav{max-width:1080px;margin:0 auto;padding:6px 12px 12px;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 nav a{flex:none;color:#fff;background:rgba(255,255,255,.18);border-radius:99px;padding:6px 14px;font-weight:700;font-size:14px;white-space:nowrap}
@@ -113,11 +113,11 @@ main{max-width:1080px;margin:0 auto;padding:20px 16px 60px}
 h1{font-size:22px;margin:4px 0 12px;padding:4px 0 4px 14px;border-left:7px solid var(--warm);border-radius:3px;line-height:1.5}
 h2{font-size:16px;margin:0 0 14px}
 h3{font-size:15px;margin:16px 0 6px;color:var(--main-dk)}
-.card h2,.ribbon{position:relative;display:inline-block;background:var(--main);color:#fff;padding:5px 18px 5px 16px;
+.card h2,.ribbon{position:relative;display:inline-block;background:var(--main-dk);color:#fff;padding:5px 18px 5px 16px;
 margin:0 0 14px -28px;border-radius:0 10px 10px 0;box-shadow:0 2px 6px rgba(42,143,156,.25)}
-.card h2::before,.ribbon::before{content:"";position:absolute;left:0;bottom:-9px;border-top:9px solid var(--main-dk);border-left:9px solid transparent}
+.card h2::before,.ribbon::before{content:"";position:absolute;left:0;bottom:-9px;border-top:9px solid #124b53;border-left:9px solid transparent}
 .card.warm h2{background:var(--warm)}.card.warm h2::before{border-top-color:var(--warm-dk)}
-.card.alert h2{background:var(--ng)}.card.alert h2::before{border-top-color:#b8322b}
+.card.alert h2{background:#c63a32}.card.alert h2::before{border-top-color:#8f2722}
 .muted{color:var(--sub)}.small{font-size:13px}
 .card{background:var(--card);border-radius:18px;padding:18px 20px;margin-bottom:18px;box-shadow:var(--shadow)}
 .card.alert{border:2px solid var(--ng);background:var(--ng-weak)}
@@ -143,11 +143,11 @@ a.badge:hover{text-decoration:none;filter:brightness(.96)}
 .kcard .head{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px;color:var(--sub);margin-bottom:4px}
 .kcard .kid{font-weight:800;font-size:15px}
 .kcard p{margin:4px 0 8px}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:2px solid var(--main);background:#fff;color:var(--main-dk);
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:2px solid var(--main-dk);background:#fff;color:var(--main-dk);
 border-radius:99px;padding:6px 20px;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 3px 0 rgba(42,143,156,.25);text-align:center}
 .btn:hover{text-decoration:none;filter:brightness(1.03)}
 .btn:active{transform:translateY(2px);box-shadow:none}
-.btn.primary{background:linear-gradient(120deg,var(--main),var(--sky));border-color:transparent;color:#fff}
+.btn.primary{background:linear-gradient(120deg,var(--main-dk),var(--sky));border-color:transparent;color:#fff}
 .btn.warm{background:var(--warm);border-color:var(--warm);color:#fff;box-shadow:0 3px 0 var(--warm-dk)}
 .btn.ng{border-color:var(--ng);color:var(--ng);box-shadow:0 3px 0 rgba(229,83,75,.25)}
 .btn.ng.solid{background:var(--ng);color:#fff}
@@ -231,6 +231,38 @@ form.inline{display:inline}
 .pick-row:hover{border-color:var(--main);text-decoration:none}
 .question{font-size:19px;font-weight:800;line-height:1.7;margin:8px 0 14px}
 .btn.big{min-height:54px;font-size:17px;padding:8px 28px}
+:focus-visible{outline:3px solid #ffb020;outline-offset:2px;border-radius:8px}
+.gnav{max-width:1080px;margin:0 auto;padding:4px 12px 12px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.gnav .grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.gnav .gl{font-size:11px;font-weight:800;color:#fff;opacity:.9;letter-spacing:.08em;margin-right:2px}
+.gnav a{color:#fff;background:rgba(255,255,255,.2);border-radius:99px;padding:5px 13px;font-weight:700;font-size:14px;white-space:nowrap}
+.gnav a.on,.gnav a:hover{background:#fff;color:var(--main-dk);text-decoration:none}
+.menubtn{display:none;margin-left:auto;color:#fff;font-weight:800;border:2px solid rgba(255,255,255,.8);border-radius:99px;padding:4px 14px;font-size:14px}
+.menubtn:hover{text-decoration:none;background:rgba(255,255,255,.15)}
+.tabbar{display:none}
+.quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 18px}
+.quick a{display:flex;flex-direction:column;justify-content:center;gap:2px;min-height:76px;background:var(--card);border-radius:16px;padding:12px 16px;
+box-shadow:var(--shadow);color:var(--ink);border:2px solid transparent;font-weight:800;font-size:16px}
+.quick a span{font-size:12px;font-weight:600;color:var(--sub)}.quick a:hover{border-color:var(--main);text-decoration:none}
+.quick a.main{background:linear-gradient(120deg,var(--main-dk),var(--sky));color:#fff}.quick a.main span{color:#eaf6ff}
+.todo{list-style:none;padding:0;margin:0}.todo li{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.todo li:last-child{border-bottom:0}.todo .dot{flex:none;width:10px;height:10px;border-radius:99px;background:var(--sun)}
+.todo .dot.ok{background:var(--ok)}.todo .dot.ng{background:var(--ng)}.todo a{font-weight:700}
+.menu-grp{margin-bottom:18px}.menu-grp h2{margin-bottom:10px}
+.menu-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.menu-tiles a{display:block;background:var(--card);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);color:var(--ink);font-weight:800;border-left:6px solid var(--main)}
+.menu-tiles a span{display:block;font-size:12px;font-weight:600;color:var(--sub);line-height:1.5;margin-top:2px}
+.menu-tiles a.on{border-left-color:var(--warm)}.menu-tiles a:hover{text-decoration:none;filter:brightness(.98)}
+.checklist{list-style:none;padding:0;margin:0}.checklist li{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line)}
+.checklist li:last-child{border-bottom:0}
+.menubtn{white-space:nowrap}
+@media(max-width:700px){.gnav{display:none}.menubtn{display:inline-block}.brand small{display:none}.bar{padding:10px 14px}
+.tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;
+border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(40,90,120,.12);padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+.tabbar a{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:54px;color:var(--sub);font-size:11px;font-weight:800;border-radius:12px}
+.tabbar a b{font-size:20px;line-height:1.2;font-weight:400}
+.tabbar a.on{color:var(--main-dk);background:var(--main-weak)}.tabbar a:hover{text-decoration:none}
+main{padding-bottom:100px!important}}
 @media(max-width:600px){main{padding:14px 12px 50px}.card{padding:16px 14px;border-radius:16px}
 .card h2,.ribbon{margin-left:-22px}h1{font-size:20px}.btnrow .btn{flex:1}}
 """
@@ -250,22 +282,52 @@ i.addEventListener('change',function(){var n=[];for(var k=0;k<i.files.length;k++
 ['dragleave','drop'].forEach(function(t){i.addEventListener(t,function(){b.classList.remove('over')})});});
 """
 
-NAV = (("home", "/", "ダッシュボード"), ("ideas", "/ideas", "ネタ出し"), ("neta", "/neta", "ネタ帳"),
-       ("interview", "/interview", "インタビュー"), ("kakera", "/kakera", "かけら"), ("articles", "/articles", "記事と充足度"), ("drafts", "/drafts", "下書き"), ("kabeuchi", "/kabeuchi", "壁打ち"), ("research", "/research", "リサーチ"),
-       ("reactions", "/reactions", "反応記録"), ("publish", "/publish", "公開準備"), ("sns", "/sns", "SNS"), ("check", "/check", "チェッカー"), ("guide", "/guide", "使い方"))
+# メニュー: 作業の流れ（集める → 調べる → 書く → 届ける）ごとにまとめる。(キー, URL, 名前, ひとこと)
+NAV_GROUPS = (
+    ("集める", (("neta", "/neta", "ネタ帳", "思いついたことを1行メモ"), ("interview", "/interview", "インタビュー", "質問に答えるだけで、かけらになる"),
+              ("kakera", "/kakera", "かけら", "記事の材料（体験したこと）"), ("articles", "/articles", "記事と充足度", "記事・区間と、足りない観点"))),
+    ("調べる", (("ideas", "/ideas", "ネタ出し", "書けそうなテーマの候補"), ("research", "/research", "リサーチ", "調べて資料にする"))),
+    ("書く", (("drafts", "/drafts", "下書き", "かけら・資料から下書きと版"), ("kabeuchi", "/kabeuchi", "壁打ち", "スマホで相談（本文は確定しない）"),
+             ("check", "/check", "チェッカー", "公開前の言い回し・個人情報の確認"))),
+    ("届ける", (("publish", "/publish", "公開準備", "境界チェック・プレビュー・値付け"), ("sns", "/sns", "SNS", "X・Threads の投稿文"),
+              ("reactions", "/reactions", "反応記録", "スキ・購入の数"))),
+    ("その他", (("guide", "/guide", "使い方", "使い方と初回のお知らせ"),)),
+)
+NAV = (("home", "/", "ダッシュボード"),) + tuple((k, h, l) for _, items in NAV_GROUPS for k, h, l, _ in items)
+# スマホの下のタブ（よく使うものだけ。ほかは「メニュー」から）
+TABS = (("home", "/", "⌂", "ホーム"), ("kakera", "/kakera/new", "＋", "書く"), ("interview", "/interview", "？", "答える"),
+        ("drafts", "/drafts", "≡", "下書き"), ("menu", "/menu", "☰", "メニュー"))
+
+
+def page_menu(active: str = "") -> str:
+    groups = "".join(
+        f'<div class="menu-grp"><div class="card"><h2>{e(g)}</h2><div class="menu-tiles">'
+        + "".join(f'<a href="{h}" class="{"on" if k == active else ""}">{e(l)}<span>{e(d)}</span></a>' for k, h, l, d in items)
+        + "</div></div></div>" for g, items in NAV_GROUPS)
+    return f"""<h1>メニュー</h1><div class="menu-tiles" style="margin-bottom:18px"><a href="/">ダッシュボード<span>今の状態と、すぐやること</span></a></div>{groups}"""
 
 
 def layout(title: str, body: str, active: str = "", flash: str = "", error: bool = False, nav: bool = True,
            head: str = "") -> str:
-    links = "".join(f'<a href="{href}" class="{"on" if key == active else ""}">{label}</a>'
-                    for key, href, label in NAV) if nav else ""
+    links = ""
+    tabs = ""
+    if nav:
+        links = (f'<div class="grp"><a href="/" class="{"on" if active == "home" else ""}">ダッシュボード</a></div>'
+                 + "".join(f'<div class="grp"><span class="gl">{e(g)}</span>'
+                           + "".join(f'<a href="{h}" class="{"on" if k == active else ""}">{e(l)}</a>' for k, h, l, _ in items)
+                           + "</div>" for g, items in NAV_GROUPS))
+        tab_keys = {k for k, _, _, _ in TABS}
+        tabs = '<nav class="tabbar" aria-label="よく使う画面">' + "".join(
+            f'<a href="{h}" class="{"on" if (k == active or (k == "menu" and active not in tab_keys)) else ""}"><b>{i}</b>{e(l)}</a>'
+            for k, h, i, l in TABS) + "</nav>"
     fl = f'<div class="flash {"err" if error else ""}">{e(safe(flash))}</div>' if flash else ""
     return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>{e(title)} — notewriter</title>{head}<style>{CSS}</style></head><body>
-<header><div class="bar"><span class="brand">notewriter<small>体験談・リサーチ記事の制作支援</small></span></div>
-{f"<nav>{links}</nav>" if links else ""}</header>
-<main>{fl}{body}</main><script>{JS}</script></body></html>"""
+<header><div class="bar"><a class="brand" href="/">notewriter<small>体験談・リサーチ記事の制作支援</small></a>
+{'<a class="menubtn" href="/menu">☰ メニュー</a>' if nav else ""}</div>
+{f'<nav class="gnav" aria-label="メニュー">{links}</nav>' if links else ""}</header>
+<main>{fl}{body}</main>{tabs}<script>{JS}</script></body></html>"""
 
 
 # ---------- お知らせ（初回） ----------
@@ -616,6 +678,34 @@ def page_coverage(name: str) -> Optional[str]:
 
 # ---------- ダッシュボード ----------
 
+def next_steps_card(st: dict) -> str:
+    """次にやると良いこと（数があるものだけ。責めない言い方で）。"""
+    items = []
+
+    def add(n: int, text: str, href: str) -> None:
+        if n:
+            items.append(f'<li><span class="dot"></span><a href="{href}">{e(text)}</a></li>')
+
+    add(st.get("neta_unsorted", 0), f"未整理のネタが {st.get('neta_unsorted', 0)} 件あります（かけらにできるか見てみる）", "/neta")
+    try:
+        from . import interview, sns, style_learn
+        q = sum(len(interview.pending(a["name"])) for a in _kakera().list_articles())
+        add(q, f"インタビューの質問が {q} 問あります（答えるとかけらが増えます）", "/interview")
+        c = style_learn.counts().get("未検討", 0)
+        add(c, f"文体ルールの候補が {c} 件あります（採用するか決める）", "/style/candidates")
+        due = sns.health_due()
+        add(len(due), f"今月の SNS 健康診断がまだです（{'、'.join(due)}）", "/sns/health")
+        stale = len(_research().stale_materials()) if research_available() else 0
+        add(stale, f"1年以上前に調べた資料が {stale} 件あります（調べ直しを検討）", "/research/materials")
+    except store.VaultError:
+        raise
+    except Exception:
+        pass
+    if not items:
+        return ""
+    return f'<div class="card"><h2>次にやること</h2><ul class="todo">{"".join(items)}</ul></div>'
+
+
 def page_home() -> str:
     K = _kakera()
     st = K.stats()
@@ -640,12 +730,17 @@ def page_home() -> str:
     if no_art:
         art_html += f'<p class="small muted">記事が未設定のかけら: {no_art} 件</p>'
     return f"""<h1>ダッシュボード</h1>
+<div class="quick"><a class="main" href="/kakera/new">＋ かけらを書く<span>体験したことを書きとめる</span></a>
+<a href="/interview">インタビューに答える<span>質問に答えるだけ</span></a>
+<a href="#neta">ネタを1行メモ<span>思いついたことをすぐ</span></a>
+<a href="/drafts">下書きを見る<span>作成・直し・版</span></a></div>
+{next_steps_card(st)}
 <div class="kpi">{kpi}</div>
 <div class="grid"><div>
 <div class="card"><h2>最近のかけら</h2>{"".join(kakera_card(k) for k in recent) or '<p class="muted">まだかけらがありません。</p>'}
 <div class="btnrow"><a class="btn primary" href="/kakera/new">＋ かけらを書く</a><a class="btn" href="/kakera">すべて見る</a></div></div>
 <div class="card"><h2>記事ごとの充足度</h2>{art_html}</div></div>
-<div><div class="card warm"><h2>ネタ帳</h2><form method="post" action="/neta/new">
+<div><div class="card warm" id="neta"><h2>ネタ帳</h2><form method="post" action="/neta/new">
 <textarea name="body" rows="3" placeholder="思いついたことを1行でも" required></textarea>
 <div class="btnrow"><button class="btn warm">ネタを保存</button></div></form>
 <p class="small">未整理のネタ <b>{st.get("neta_unsorted", 0)}</b> 件 → <a href="/neta">ネタ帳を開く</a></p></div>
@@ -1900,6 +1995,8 @@ class Handler(BaseHTTPRequestHandler):
                 page, title, active = page_articles(), "記事と充足度", "articles"
             elif path == "/check":
                 page, title, active = page_check(vdir), "チェッカー", "check"
+            elif path == "/menu":
+                page, title, active = page_menu(), "メニュー", "menu"
             elif path in ("/guide", "/notice"):
                 page, title, active = page_guide(), "使い方", "guide"
             elif m := re.fullmatch(r"/kakera/([A-Za-z0-9]+)", path):

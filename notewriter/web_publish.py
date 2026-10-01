@@ -55,9 +55,31 @@ def boundary_card(text: str) -> str:
         cols = (f'<div class="cols"><div><h3>無料エリアの見出し</h3><ul>{"".join(f"<li>{e(h)}</li>" for h in free_h) or "<li class=muted>なし</li>"}</ul></div>'
                 f'<div><h3>有料エリアの見出し</h3><ul>{"".join(f"<li>{e(h)}</li>" for h in paid_h) or "<li class=muted>なし</li>"}</ul></div></div>')
     marks = " ／ ".join(f"<code>{e(m)}</code>" for m in cfg["paywall_markers"])
-    return (f'<div class="card"><h2>無料/有料の境界チェック</h2>'
+    return (f'<div class="card" id="boundary"><h2>無料/有料の境界チェック</h2>'
             f'<p class="small">区切り行（{marks}）より前が無料、後ろが有料です。有料の見出しが無料エリアで予告されているかを機械的に突き合わせます（警告だけ。本文は変えません）。</p>'
             f'{findings_html(fs)}{cols}</div>')
+
+
+def checklist_card(name: str, text: str) -> str:
+    """公開前に確かめることの一覧（上から順に。押すとその場所へ）。投稿・公開は人がブラウザで行う。"""
+    fs = P.check_boundary(text)
+    n = P.summarize(fs)
+    if n["strong"]:
+        b = f'<span class="badge b-strong">強い警告 {n["strong"]}</span>'
+    elif n["warn"]:
+        b = f'<span class="badge b-warn">警告 {n["warn"]}</span>'
+    else:
+        b = '<span class="badge b-ok">OK</span>'
+    rows = [
+        (b, '<a href="#boundary">無料/有料の境界と [要追加] の残り</a>'),
+        ('<span class="badge b-st">人が確認</span>', '<a href="#compliance">コンプライアンスチェック（編集後の全文）</a>'),
+        ('<span class="badge b-st">見る</span>', '<a href="#preview">スマホでの見え方（プレビュー）</a>'),
+        ('<span class="badge b-st">決める</span>', '<a href="#price">価格（目安を見て自分で決める）</a>'),
+        ('<span class="badge">任意</span>', '<a href="#crosssell">記事末尾の案内・サムネイル・SNS</a>'),
+    ]
+    items = "".join(f"<li>{badge}{link}</li>" for badge, link in rows)
+    return (f'<div class="card warm"><h2>公開前のチェックリスト</h2><ul class="checklist">{items}</ul>'
+            f'<p class="small muted">note への投稿・公開ボタンは、確かめたあとにブラウザで自分で押します。</p></div>')
 
 
 def page_index() -> str:
@@ -85,12 +107,14 @@ def page_article(name: str, qs: dict) -> str:
     extra = "".join(m.publish_card(name, text) for m in _card_modules())
     return f"""<p class="small"><a href="/publish">公開準備</a> ／ <a href="/drafts/{e(quote(name, safe=""))}">下書き</a></p>
 <h1>{e(name)} の公開準備</h1>
-<div class="card"><h2>note スマホプレビュー</h2>
+{checklist_card(name, text)}
+<div class="card" id="preview"><h2>note スマホプレビュー</h2>
 <p class="small">本文幅 620px 相当・見出し・目次・有料の区切り線を再現した表示です（見た目の目安）。</p>
-<form method="get" action="{e(purl(name, "/preview"))}" class="btnrow"><input type="number" name="price" min="0" step="10" placeholder="価格（任意）" value="{e(price)}" style="max-width:180px">
-<button class="btn primary">プレビューを開く</button></form></div>
+<form method="get" action="{e(purl(name, "/preview"))}"><label class="f">価格（任意。プレビューの有料ラインに表示）</label>
+<input type="number" name="price" min="0" step="10" placeholder="例: 300" value="{e(price)}">
+<div class="btnrow"><button class="btn primary">プレビューを開く</button></div></form></div>
 {boundary_card(text)}
-<div class="card"><h2>コンプライアンスチェック</h2><p class="small">公開前に、編集後を含む本文全体を必ず確かめてください。</p>
+<div class="card" id="compliance"><h2>コンプライアンスチェック</h2><p class="small">公開前に、編集後を含む本文全体を必ず確かめてください。</p>
 <form method="post" action="/check"><input type="hidden" name="mode" value="drafts"><input type="hidden" name="drafts" value="{e(W.draft_rel(name))}">
 <button class="btn">コンプライアンスチェック</button></form></div>
 {extra}"""

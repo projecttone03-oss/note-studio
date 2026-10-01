@@ -27,7 +27,7 @@ def price_card(name: str, text: str) -> str:
     if past:
         past_html = ("<p class='small'>これまでに公開した記事: " + "、".join(
             f"{e(p['title'][:20])}（{'無料' if not p['price'] else str(p['price']) + '円'}）" for p in past) + "</p>")
-    return (f'<div class="card"><h2>値付けの目安</h2><p class="money">{s["low"]}〜{s["high"]}円</p>'
+    return (f'<div class="card" id="price"><h2>値付けの目安</h2><p class="money">{s["low"]}〜{s["high"]}円</p>'
             f'<p>{e(s["summary"])}</p><details><summary>理由（情報密度 {s["score"]}/{s["max_score"]} 点）</summary>'
             f'<ul class="small">{"".join(f"<li>{e(r)}</li>" for r in s["reasons"])}</ul></details>{past_html}'
             f'<p class="small muted">文字数と情報密度から機械的に出した目安です。価格は自分で決めてください（帯は config/pricing.json）。</p></div>')
@@ -47,7 +47,7 @@ def crosssell_card(name: str, text: str) -> str:
                 f'<textarea rows="6" readonly onclick="this.select()">{e(cs)}</textarea>'
                 f'<form method="post" action="{e(purl(name, "/crosssell"))}" data-confirm="下書きの末尾にこの案内文を足して、新しい版として保存します。よいですか？">'
                 f'<div class="btnrow"><button class="btn">下書きの末尾に足す（新しい版）</button></div></form>')
-    return f'<div class="card"><h2>クロスセル導線（記事末尾の案内）</h2>{body}</div>'
+    return f'<div class="card" id="crosssell"><h2>クロスセル導線（記事末尾の案内）</h2>{body}</div>'
 
 
 def publish_card(name: str, text: str) -> str:
