@@ -234,7 +234,7 @@ i.addEventListener('change',function(){var n=[];for(var k=0;k<i.files.length;k++
 """
 
 NAV = (("home", "/", "ダッシュボード"), ("ideas", "/ideas", "ネタ出し"), ("neta", "/neta", "ネタ帳"),
-       ("kakera", "/kakera", "かけら"), ("articles", "/articles", "記事と充足度"), ("drafts", "/drafts", "下書き"), ("research", "/research", "リサーチ"),
+       ("kakera", "/kakera", "かけら"), ("articles", "/articles", "記事と充足度"), ("drafts", "/drafts", "下書き"), ("kabeuchi", "/kabeuchi", "壁打ち"), ("research", "/research", "リサーチ"),
        ("reactions", "/reactions", "反応記録"), ("check", "/check", "チェッカー"), ("guide", "/guide", "使い方"))
 
 
@@ -1359,7 +1359,7 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 
 # 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
 # web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
-EXTENSIONS = ("web_style", "web_writing")
+EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi")
 
 
 def _extensions(path: str):

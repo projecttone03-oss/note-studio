@@ -2,14 +2,13 @@
 import json
 import os
 import re
-import threading
 import time
 import unittest
 import urllib.parse
 
 from notewriter import store, style_learn, web, writing
 from tests.test_writing import WritingBase, ART
-from tests.test_writing_web import OPENER
+from tests.webutil import ServerMixin
 
 
 def cands(*rules):
@@ -85,32 +84,10 @@ class StyleLearnTest(WritingBase):
         self.assertEqual(jobs.longest_common("ABC d", "zABCdz"), "ABCd")
 
 
-class StyleWebTest(WritingBase):
+class StyleWebTest(ServerMixin, WritingBase):
     def setUp(self):
         super().setUp()
-        store.write_json(store.vault() / web.NOTICE_FILE, {"acknowledged_at": store.now(),
-                                                           "notice_version": web.NOTICE_VERSION})
-        self.httpd = web.make_server("127.0.0.1", 0)
-        self.httpd.quiet = True
-        self.base = f"http://127.0.0.1:{self.httpd.server_address[1]}"
-        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
-
-    def tearDown(self):
-        self.httpd.shutdown()
-        self.httpd.server_close()
-        super().tearDown()
-
-    def req(self, path, fields=None):
-        import urllib.error
-        import urllib.request
-        data = urllib.parse.urlencode(fields or {}, doseq=True).encode("utf-8") if fields is not None else None
-        r = urllib.request.Request(self.base + path, data=data, method="POST" if data is not None else "GET",
-                                   headers={"Sec-Fetch-Site": "same-origin"})
-        try:
-            with OPENER.open(r) as resp:
-                return resp.status, resp.read().decode("utf-8"), resp.headers
-        except urllib.error.HTTPError as ex:
-            return ex.code, ex.read().decode("utf-8"), ex.headers
+        self.start_server()
 
     def test_flow(self):
         self.generate()

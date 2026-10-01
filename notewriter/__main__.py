@@ -21,6 +21,7 @@
   ./nw draft revise 記事 段落番号 指示 [--show-prompt]  段落の書き直しを提案させる（採用するまで本文は変わらない）
   ./nw draft accept|discard JOB                        改稿の提案を採用／見送り
   ./nw style show|edit|edits                           文体ルール集（edit は $EDITOR か標準入力）と、手直しの記録
+  ./nw kabeuchi start 記事 [--tmux]|status|stop 記事   壁打ち（確認実行でツール0を確かめてから claude --remote-control で起動）
   ./nw style suggest|candidates|adopt|reject           手直しから文体ルールの候補（採用したものだけ追記）
 
 作業フォルダが使えない（未初期化・未マウント）ときは終了コード2。check と rules は作業フォルダなしでも動く。
@@ -864,6 +865,40 @@ def cmd_style_reject(args) -> None:
     print(f"{args.cid} を却下しました。")
 
 
+def cmd_kabeuchi_start(args) -> None:
+    from . import kabeuchi as KB
+    use_tmux = bool(args.tmux)
+    if use_tmux and not KB.tmux_path():
+        sys.exit("tmux が見つかりません（--tmux を外すと、この端末で起動します）。")
+    print("起動と同じフラグ・同じ材料ファイルで確認実行しています…", flush=True)
+    info = KB.start(args.article, use_tmux=use_tmux)
+    print(f"確認実行 OK: ツール {len(info['preflight']['tools'])} 個・MCP なし（{info['preflight']['at']}）")
+    print("注意: Remote Control の会話は全文が Anthropic のサーバーに保存されます（30日／モデル改善を許可していれば5年）。")
+    print("      この機械にも ~/.claude/projects/ に履歴が残ります（VPS では暗号化フォルダの中に置くこと）。")
+    if info["tmux"]:
+        print(f"tmux で起動しました。スマホの Claude アプリで「{info['session']}」を開いてください。止めるには ./nw kabeuchi stop 記事名")
+        return
+    print(f"この端末で起動します。スマホの Claude アプリで「{info['session']}」を開けます。", flush=True)
+    os.chdir(info["cwd"])
+    os.execvpe(info["argv"][0], info["argv"], KB.launch_env())
+
+
+def cmd_kabeuchi_status(args) -> None:
+    from . import kabeuchi as KB
+    rows = KB.overview()
+    if not rows:
+        print("記事がありません（./nw article add で登録）")
+    for r in rows:
+        pf = r["preflight"]
+        print(f"{r['article']}  {'起動中' if r['running'] else '停止'}  名前: {r['session']}"
+              + (f"  確認実行: {pf['at']}" if pf else ""))
+
+
+def cmd_kabeuchi_stop(args) -> None:
+    from . import kabeuchi as KB
+    print("止めました。" if KB.stop(args.article) else "起動していませんでした。")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1053,6 +1088,14 @@ def build_parser() -> argparse.ArgumentParser:
     a = d.add_parser("accept", help="改稿の提案（または保留中の作成結果）を本文に入れる")
     a.add_argument("job"); a.set_defaults(func=cmd_draft_accept)
     a = d.add_parser("discard", help="改稿の提案を見送る"); a.add_argument("job"); a.set_defaults(func=cmd_draft_discard)
+
+    kb = sub.add_parser("kabeuchi", help="壁打ちセッション（ツールなし・Remote Control）").add_subparsers(dest="sub", required=True)
+    a = kb.add_parser("start", help="確認実行（ツール0・MCPなし）のあと起動する。既定はこの端末で起動")
+    a.add_argument("article"); a.add_argument("--tmux", action="store_true", help="tmux で裏に常駐させる")
+    a.set_defaults(func=cmd_kabeuchi_start)
+    kb.add_parser("status", help="記事ごとの状態").set_defaults(func=cmd_kabeuchi_status)
+    a = kb.add_parser("stop", help="tmux で常駐中のセッションを止める"); a.add_argument("article")
+    a.set_defaults(func=cmd_kabeuchi_stop)
 
     st = sub.add_parser("style", help="文体ルール集").add_subparsers(dest="sub", required=True)
     st.add_parser("show", help="表示").set_defaults(func=cmd_style_show)
