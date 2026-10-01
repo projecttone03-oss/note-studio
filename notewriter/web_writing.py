@@ -12,6 +12,7 @@ from urllib.parse import quote, unquote
 from . import writing as W
 from .web import e, lines_html, qurl, safe
 
+PREFIXES = ("/drafts", "/style")
 JOB_STATUS = {"running": ("書いています", "b-st"), "done": ("完了", "b-ok"), "error": ("失敗", "b-strong"),
               "limit": ("利用上限", "b-strong"), "conflict": ("保留（本文が変わった）", "b-warm")}
 
@@ -269,8 +270,8 @@ def page_style() -> str:
 <p class="small">下書きを作るたびに「書き方の参考」として Claude に渡します。事実の材料にはしません。1行1ルールで書いてください。</p>
 <form method="post" action="/style"><textarea name="rules" class="tall" rows="16">{e(W.get_style())}</textarea>
 <div class="btnrow"><button class="btn primary">保存</button></div></form></div></div>
-<div><div class="card"><h2>最近の手直し</h2><p class="small">AI の段落（上）を人が直した結果（下）です。ルールを書く手がかりにしてください。
-直しからルールの候補を出す機能は、次の段階で追加します。</p>{ed or '<p class="muted">まだ記録がありません。</p>'}</div></div></div>"""
+<div><div class="card"><h2>最近の手直し</h2><p class="small">AI の段落（上）を人が直した結果（下）です。ルールを書く手がかりにしてください。</p>
+<div class="btnrow"><a class="btn" href="/style/candidates">直しからルールの候補を出す</a></div>{ed or '<p class="muted">まだ記録がありません。</p>'}</div></div></div>"""
 
 
 # ---------------------------------------------------------------- 画面の振り分け

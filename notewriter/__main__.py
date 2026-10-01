@@ -21,6 +21,7 @@
   ./nw draft revise 記事 段落番号 指示 [--show-prompt]  段落の書き直しを提案させる（採用するまで本文は変わらない）
   ./nw draft accept|discard JOB                        改稿の提案を採用／見送り
   ./nw style show|edit|edits                           文体ルール集（edit は $EDITOR か標準入力）と、手直しの記録
+  ./nw style suggest|candidates|adopt|reject           手直しから文体ルールの候補（採用したものだけ追記）
 
 作業フォルダが使えない（未初期化・未マウント）ときは終了コード2。check と rules は作業フォルダなしでも動く。
 """
@@ -820,6 +821,49 @@ def cmd_style_edits(args) -> None:
         print(f"AI: {x.get('ai')}\n人: {x.get('human')}")
 
 
+def cmd_style_suggest(args) -> None:
+    from . import style_learn as S
+    p = S.prepare_from_edits()
+    if args.show_prompt:
+        print("===== Claude に渡す文章（これが全文です） =====")
+        print(p["prompt"])
+        print("===== ここまで =====\n")
+    print(f"手直しの記録 {p['count']} 組から、文体ルールの候補を出させます（{p['chars']}字。全文は --show-prompt）。")
+    print("ツールなし・Web検索なし・MCPなしの別セッションで、標準入力で渡します。候補は採用するまで反映しません。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+    job = S.run_from_edits(p["confirm_token"])
+    if job.get("status") != "done":
+        _job_failed(_writing(), job)
+    print(f"候補を {len(job.get('added') or [])} 件追加しました。./nw style candidates で確認してください。")
+
+
+def cmd_style_candidates(args) -> None:
+    from . import style_learn as S
+    items = S.list_candidates("" if args.all else "未検討")
+    if not items:
+        print("（未検討の候補はありません）")
+    for c in items:
+        print(f"{c['id']} [{c['status']}] {c['rule']}")
+        if c.get("reason"):
+            print(f"    理由: {c['reason']}")
+        for f in c.get("flags") or []:
+            print(f"    ⚠ {f}")
+
+
+def cmd_style_adopt(args) -> None:
+    from . import style_learn as S
+    c = S.adopt(args.cid, args.text)
+    print(f"{c['id']} を採用し、文体ルール集に追記しました: {c['rule']}")
+
+
+def cmd_style_reject(args) -> None:
+    from . import style_learn as S
+    S.reject(args.cid)
+    print(f"{args.cid} を却下しました。")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1015,6 +1059,14 @@ def build_parser() -> argparse.ArgumentParser:
     st.add_parser("edit", help="書く（$EDITOR か標準入力）").set_defaults(func=cmd_style_edit)
     a = st.add_parser("edits", help="AI の段落と人の手直しの記録（文体学習の材料）")
     a.add_argument("--limit", type=int, default=20); a.set_defaults(func=cmd_style_edits)
+    a = st.add_parser("suggest", help="手直しの記録から文体ルールの候補を出させる（yes で実行。自動反映しない）")
+    a.add_argument("--show-prompt", action="store_true"); a.set_defaults(func=cmd_style_suggest)
+    a = st.add_parser("candidates", help="文体ルールの候補の一覧")
+    a.add_argument("--all", action="store_true", help="採用・却下済みも表示"); a.set_defaults(func=cmd_style_candidates)
+    a = st.add_parser("adopt", help="候補を採用して文体ルール集に追記する")
+    a.add_argument("cid"); a.add_argument("--text", default=None, help="直した文で採用する")
+    a.set_defaults(func=cmd_style_adopt)
+    a = st.add_parser("reject", help="候補を却下する"); a.add_argument("cid"); a.set_defaults(func=cmd_style_reject)
     return p
 
 
@@ -1035,7 +1087,7 @@ def main(argv=None) -> None:
         print("\n中止しました。", file=sys.stderr)
         sys.exit(130)
     except Exception as ex:  # リサーチは外部とやり取りするので、トレースバックではなく伏せ字済みの理由だけ出す
-        if getattr(args, "cmd", "") not in ("research", "ideas", "draft"):
+        if getattr(args, "cmd", "") not in ("research", "ideas", "draft", "style", "kabeuchi", "book", "sns", "rdraft"):
             raise
         print(_safe(f"エラー（{type(ex).__name__}）: {ex}"), file=sys.stderr)
         sys.exit(1)

@@ -1357,9 +1357,17 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 # ロジックは ideas.py。材料（得意・経験リスト・ネタ帳・反応記録の要約・過去の候補）は Anthropic の Claude に渡す
 # （Web検索はしない）。送る前に全文を見せて、OK を押してから渡す。かけらは材料にしない。
 
-def _writing_web():
-    from . import web_writing
-    return web_writing
+# 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
+# web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
+EXTENSIONS = ("web_style", "web_writing")
+
+
+def _extensions(path: str):
+    import importlib
+    for name in EXTENSIONS:
+        mod = importlib.import_module("notewriter." + name)
+        if any(path == p or path.startswith(p + "/") for p in mod.PREFIXES):
+            yield mod
 
 
 def _ideas():
@@ -1879,10 +1887,12 @@ class Handler(BaseHTTPRequestHandler):
                 page, title, active = page_skills(), "得意・経験リスト", "ideas"
             elif path == "/reactions":
                 page, title, active = page_reactions(), "反応記録", "reactions"
-            if page is None and (path == "/style" or path.startswith("/drafts")):
-                r = _writing_web().route_get(path, qs)
-                if r:
-                    page, title, active, head = r
+            if page is None:
+                for mod in _extensions(path):
+                    r = mod.route_get(path, qs)
+                    if r:
+                        page, title, active, head = r
+                        break
             if page is None:
                 self._page("見つかりません", "<h1>見つかりません</h1>", status=404)
             else:
@@ -1965,13 +1975,14 @@ class Handler(BaseHTTPRequestHandler):
             return "/ideas"
         if path.startswith("/reactions"):
             return "/reactions"
-        if path == "/style" or path.startswith("/drafts"):
-            return _writing_web().back(path)
+        for mod in _extensions(path):
+            return mod.back(path)
         return "/"
 
     def _post(self, path: str, form: Form, vdir: Path) -> None:
-        if (path == "/style" or path.startswith("/drafts")) and _writing_web().post(self, path, form):
-            return
+        for mod in _extensions(path):
+            if mod.post(self, path, form):
+                return
         K = _kakera()
         if path == "/check":
             self._post_check(form, vdir)

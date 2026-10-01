@@ -20,9 +20,37 @@
     "上限"
   ],
   "disallowed_tools": [
-    "WebSearch", "WebFetch",
-    "Bash", "BashOutput", "KillShell", "Edit", "MultiEdit", "Write", "Read", "Glob", "Grep", "LS",
-    "NotebookEdit", "NotebookRead", "Task", "Agent", "Skill", "SlashCommand", "TodoWrite",
-    "ExitPlanMode", "EnterPlanMode", "EnterWorktree", "ExitWorktree", "Monitor", "mcp__*"
-  ]
+    "WebSearch",
+    "WebFetch",
+    "Bash",
+    "BashOutput",
+    "KillShell",
+    "Edit",
+    "MultiEdit",
+    "Write",
+    "Read",
+    "Glob",
+    "Grep",
+    "LS",
+    "NotebookEdit",
+    "NotebookRead",
+    "Task",
+    "Agent",
+    "Skill",
+    "SlashCommand",
+    "TodoWrite",
+    "ExitPlanMode",
+    "EnterPlanMode",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Monitor",
+    "mcp__*"
+  ],
+  "style_candidates": {
+    "_説明": "文体ルール候補（./nw style suggest・/style/candidates）。copy_max_chars 字以上、材料の文がそのまま続く候補は直すまで採用できない。",
+    "edits_max": 40,
+    "edits_max_chars": 20000,
+    "max_candidates": 8,
+    "copy_max_chars": 20
+  }
 }
