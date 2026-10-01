@@ -46,6 +46,34 @@ notestudioの段階3〜6（執筆・レビュー・公開準備・分析）は�
 - nw の変更は `./ns sync` ではなく、プルリクエストのマージで取り込む（sync は inbox/*.json しか受け取らない）。
 - かけら・下書きなどの実データは、作業フォルダ（既定 `workspace/`、本番は gocryptfs の復号ビュー）以外に置かない。commit もしない。
 
+### notewriter 開発の引き継ぎメモ（2026-10-01 更新）
+
+**できているもの**: 第1段階（かけら管理・コンプライアンスチェッカー）、リサーチ・ネタ出し・反応記録、
+第2段階の前半＝体験談の下書き作成・段落の書き直し提案・版履歴・手直しの記録（`notewriter/writing.py`・`notewriter/web_writing.py`・
+`config/writing.json`・`config/writing_prompts/`。画面 `/drafts` `/style`、CLI `./nw draft` `./nw style`）。
+
+**次に作るもの（第2段階の後半＝2b）**: SPEC.md 機能4の「壁打ち」と、機能6の「文体ルール候補」。
+- 壁打ち: 記事ごとに1つ、`claude --remote-control <名前>`（対話セッション方式）で起動するランチャー。サーバーモード
+  `claude remote-control` は使わない。起動フラグは本文確定と同じく全ツール拒否（`--tools ""`・`--disallowedTools`・
+  PreToolUse フック `notewriter/hooks/tool_guard.py`・`--strict-mcp-config`・`--setting-sources ""`）。`--bare` は使わない。
+  - 対話セッションでは system/init を直接読めないので、起動前に**同じフラグで `-p` の確認実行**をして、init のツール一覧が
+    空・MCPなしであることを確かめてから起動する（SPEC.md 絶対4）。
+  - かけら等の材料はコマンドライン引数に入れない。作業フォルダ（暗号化境界）の中にファイルを作り
+    `--append-system-prompt-file` で渡す（`claude --help` で存在を確認済み）。
+  - 対話セッションの履歴は `~/.claude/projects/` に残る（`--no-session-persistence` は -p 専用）。VPS ではこのフォルダも
+    暗号化境界に入れる必要がある旨を、画面とREADMEに明記する。
+  - 初回起動時の Remote Control の保存期間と Trusted Devices の案内（SPEC.md 絶対6）は既存のお知らせ画面と整合させる。
+- 文体ルール候補: `style/edits.jsonl`（AIの段落と人の手直しの組）をツールなしの Claude に渡し、ルールの**候補**を出させる。
+  人が採用/却下したものだけ `style/rules.md` に追記する（自動反映しない）。
+
+**クラウドでの注意**:
+- Mac の Python は **3.9.6**。クラウドの Python は新しいので、3.10 以降の書き方（`match`、実行時の `X | Y` 型、
+  かっこ付きの複数 with、f文字列の式の中で外側と同じ引用符を使う・バックスラッシュを使う）を使わない。
+  可能なら `uv python install 3.9` 等で 3.9 でもテストする。
+- クラウドの claude CLI はログインしていないので、Claude を呼ぶ部分は偽の claude（`tests/test_writing.py` の `FAKE`）で
+  テストする。本物での確認は、マージ後に Mac で行う（ダミーのかけらのみ。実データは SPEC.md 絶対5が済むまで使わない）。
+- 作業はブランチで行い、`python3 -m unittest discover tests` がすべて通ってから push する。マージは人が PR で行う。
+
 ## 参考書籍（references/books/）
 
 ユーザーが記事執筆の参考にしてほしい書籍を置く場所。`_書籍リスト.md` に「使う段階」と用途が書かれている。
