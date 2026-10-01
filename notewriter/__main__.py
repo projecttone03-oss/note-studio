@@ -22,6 +22,7 @@
   ./nw draft accept|discard JOB                        改稿の提案を採用／見送り
   ./nw style show|edit|edits                           文体ルール集（edit は $EDITOR か標準入力）と、手直しの記録
   ./nw kabeuchi start 記事 [--tmux]|status|stop 記事   壁打ち（確認実行でツール0を確かめてから claude --remote-control で起動）
+  ./nw rdraft 記事 [--materials M0001,M0002]          リサーチ資料だけから比較表と下書き（資料IDつき・鮮度切れ警告）
   ./nw publish check|preview 記事|下書き.md            無料/有料の境界チェック（警告のみ）・note スマホプレビュー
   ./nw style suggest|candidates|adopt|reject           手直しから文体ルールの候補（採用したものだけ追記）
 
@@ -932,6 +933,35 @@ def cmd_publish_preview(args) -> None:
     print(f"プレビューを書き出しました: {out}（ブラウザで開いてください。下書きの本文を含むので扱いに注意）")
 
 
+def cmd_rdraft(args) -> None:
+    from . import research_writing as RW
+    ids = [x.strip() for x in (args.materials or "").split(",") if x.strip()] or None
+    p = RW.prepare(args.article, ids)
+    if args.show_prompt:
+        print("===== Claude に渡す文章（これが全文です） =====")
+        print(p["prompt"])
+        print("===== ここまで =====\n")
+    print(f"記事「{p['article']}」の比較表と下書きを、資料 {'、'.join(p['material_ids'])} だけから作ります（{p['chars']}字）。")
+    for st in p["stale"]:
+        print(f"※ 鮮度切れの資料: {st['id']}（調べた日 {st['researched_at']}・{st['age_days']}日前）")
+    if p["replaces"]:
+        print("※ いまの下書きの本文は置き換わります（前の版は残るので戻せます）。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+    job = RW.run(args.article, ids, p["confirm_token"])
+    if job.get("status") == "conflict":
+        print(_safe(job["error"]), file=sys.stderr)
+        sys.exit(1)
+    if job.get("status") != "done":
+        _job_failed(_writing(), job)
+    W = _writing()
+    blocks = W.current(p["article"])["blocks"]
+    _print_blocks(blocks)
+    n = sum(len(b.get("flags") or []) for b in blocks)
+    print(f"\nv{job['version']} として保存しました。確認してほしい印: {n} 件")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1129,6 +1159,10 @@ def build_parser() -> argparse.ArgumentParser:
     kb.add_parser("status", help="記事ごとの状態").set_defaults(func=cmd_kabeuchi_status)
     a = kb.add_parser("stop", help="tmux で常駐中のセッションを止める"); a.add_argument("article")
     a.set_defaults(func=cmd_kabeuchi_stop)
+
+    a = sub.add_parser("rdraft", help="リサーチ資料だけから比較表と下書きを作る（yes で実行）")
+    a.add_argument("article"); a.add_argument("--materials", default="", help="使う資料ID（カンマ区切り。省略で記事の資料すべて）")
+    a.add_argument("--show-prompt", action="store_true"); a.set_defaults(func=cmd_rdraft)
 
     pb = sub.add_parser("publish", help="公開準備（境界チェック・プレビュー）").add_subparsers(dest="sub", required=True)
     a = pb.add_parser("check", help="無料/有料の境界チェック（警告のみ。警告があれば終了コード1）")

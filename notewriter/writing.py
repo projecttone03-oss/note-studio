@@ -43,7 +43,7 @@ DEFAULT_CONFIG = {
 }
 EXCLUDED_STATUS = "保留"  # 下書きの材料に使わないかけらの使用状況
 SOURCES = {"skeleton": "骨組み", "ai_generate": "AIが区間を作成", "ai_revise": "AIが段落を修正",
-           "human_edit": "人の手直し", "restore": "前の版に戻した"}
+           "human_edit": "人の手直し", "restore": "前の版に戻した", "ai_research": "AIが資料から作成"}
 STYLE_HEADER = ("# 文体ルール集\n\n"
                 "<!-- 下書きを作るたびに、この内容を「書き方の参考」として Claude に渡します。事実の材料にはしません。\n"
                 "     1行1ルールで、自由に書き足し・削除してください。 -->\n")
@@ -284,6 +284,8 @@ def _align(old: List[dict], new: List[dict]) -> Tuple[List[dict], List[Tuple[str
             ob = old[i1 + k] if op == "replace" and i1 + k < i2 else None
             if ob is not None and ob["kind"] == nb["kind"]:
                 out.append(_block(nb["text"], nb["kind"], ob.get("kakera", ()), "human"))
+                if ob.get("materials"):  # リサーチ型の段落は根拠の資料IDも引き継ぐ
+                    out[-1]["materials"] = list(ob["materials"])
                 if ob.get("origin") == "ai" and nb["kind"] == "para":
                     pairs.append((section_of(old, i1 + k), ob["text"], nb["text"]))
             else:

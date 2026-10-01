@@ -31,6 +31,13 @@ def kakera_badges(ids) -> str:
     return "".join(f'<a class="badge b-vp" href="/kakera/{e(k)}">{e(k)}</a>' for k in ids)
 
 
+def block_badges(b: dict) -> str:
+    """段落の根拠（体験談はかけら、リサーチ型は資料）。"""
+    if b.get("materials"):
+        return "".join(f'<a class="badge b-tag" href="/research/materials/{e(m)}">{e(m)}</a>' for m in b["materials"])
+    return kakera_badges(b.get("kakera"))
+
+
 def flags_html(flags) -> str:
     if not flags:
         return ""
@@ -111,13 +118,14 @@ def page_draft(name: str) -> str:
             continue
         n_flags += len(b.get("flags") or [])
         who = {"ai": "AI", "human": "人"}.get(b.get("origin"), "")
-        out.append(f'''<div class="blk {e(b.get("origin", ""))}" id="b-{i}">
-<div class="bhead"><span class="badge">[{i}] {e(who)}</span>{kakera_badges(b.get("kakera"))}</div>
-<div class="btext">{lines_html(b["text"])}</div>{flags_html(b.get("flags"))}
-<details><summary>この段落を直す（提案だけ作る）</summary>
+        revise = "" if b.get("materials") else f'''<details><summary>この段落を直す（提案だけ作る）</summary>
 <form method="post" action="{e(aurl(name, "/revise/confirm"))}"><input type="hidden" name="block" value="{i}">
 <textarea name="instruction" rows="2" placeholder="例: もっと短く。かけらのセリフをそのまま使って。" required></textarea>
-<div class="btnrow"><button class="btn sm">確認画面へ</button></div></form></details></div>''')
+<div class="btnrow"><button class="btn sm">確認画面へ</button></div></form></details>'''
+        out.append(f'''<div class="blk {e(b.get("origin", ""))}" id="b-{i}">
+<div class="bhead"><span class="badge">[{i}] {e(who)}</span>{block_badges(b)}</div>
+<div class="btext">{lines_html(b["text"])}</div>{flags_html(b.get("flags"))}
+{revise}</div>''')
     # まだ見出しのない区間（記事に区間を足したとき）
     present = {b["text"][3:].strip() for b in blocks if b["kind"] == "heading" and b["text"].startswith("## ")}
     for sec in art["sections"]:
@@ -141,6 +149,8 @@ def page_draft(name: str) -> str:
 <div class="card"><h2>確認すること</h2><p>要確認の印: <b>{n_flags}</b> 件</p>
 <p class="small">印は機械的な目安です。見落としも誤検知もあります。根拠のかけらと照らして判断してください。</p>
 <div class="btnrow">{check}<a class="btn" href="{e(aurl(name, "/versions"))}">版の一覧</a></div></div>
+<div class="card"><h2>リサーチ型の記事なら</h2><p class="small">取り込んだリサーチ資料だけを材料に、比較表と下書きを作ります。</p>
+<a class="btn" href="/rdraft/{e(quote(name, safe=""))}">資料から下書きを作る</a></div>
 <div class="card"><h2>区間</h2><ol>{"".join(f"<li>{e(s)}</li>" for s in art["sections"])}</ol>
 <p class="small"><a href="/coverage/{e(quote(name, safe=""))}">充足度を見る</a>（かけらが少ない区間は [要追加] が増えます）</p></div>
 </div></div>"""

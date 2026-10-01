@@ -52,5 +52,6 @@
     "edits_max_chars": 20000,
     "max_candidates": 8,
     "copy_max_chars": 20
-  }
+  },
+  "research_max_chars": 60000
 }

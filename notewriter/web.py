@@ -1359,7 +1359,7 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 
 # 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
 # web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
-EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish")
+EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft")
 
 
 def _extensions(path: str):
