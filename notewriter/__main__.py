@@ -2,7 +2,7 @@
 
   ./nw init                                   作業フォルダと目印を作る（本番は gocryptfs のマウント先で）
   ./nw serve [--host H] [--port 8766] [--open]
-  ./nw kakera add|list|search|show|rm ...
+  ./nw kakera add|list|search|show|suggest|rm ...
   ./nw neta add|list|promote ...
   ./nw article add|list ...
   ./nw coverage 記事名
@@ -1177,6 +1177,20 @@ def cmd_reaction_import(args) -> None:
     print(f"{added} 件を記録しました" + (f"（同じ記録 {skipped} 件は飛ばしました）" if skipped else "") + "。")
 
 
+def cmd_kakera_suggest(args) -> None:
+    from . import kakera_suggest as KS
+    k = _kakera().get_kakera(args.id)
+    sug = KS.suggest(k["body"], k["viewpoints"])
+    if not sug:
+        print("観点の候補はありません。")
+    for s in sug:
+        print(f"{s['viewpoint']}（{'・'.join(s['words'])}）")
+    if args.add:
+        for vp in args.add:
+            KS.add_viewpoint(k["id"], vp)
+        print(f"観点を足しました: {'、'.join(args.add)}")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1243,6 +1257,8 @@ def build_parser() -> argparse.ArgumentParser:
     a = k.add_parser("show", help="1件表示")
     a.add_argument("id")
     a.set_defaults(func=cmd_kakera_show)
+    a = k.add_parser("suggest", help="観点タグの候補を表示（--add で選んだ観点を足す）")
+    a.add_argument("id"); a.add_argument("--add", nargs="*", default=[]); a.set_defaults(func=cmd_kakera_suggest)
     a = k.add_parser("rm", help="削除（生成来歴に参照があれば --force が必要）")
     a.add_argument("id")
     a.add_argument("--force", action="store_true")

@@ -226,6 +226,7 @@ pre.send{white-space:pre-wrap;word-break:break-word;background:#fbfdfe;border:2p
 .snstext{font-size:16px;background:#fbfdfe;border-radius:12px;padding:10px 12px;border:1px solid var(--line)}
 form.inline{display:inline}
 .thumb{margin:0 0 16px}.thumb img{width:100%;height:auto;border-radius:12px;border:1px solid var(--line);display:block;background:#fff}
+.chk.sug{border-style:dashed;border-color:var(--sun);background:var(--sun-weak)}
 .pick-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);min-height:56px}
 .pick-row:hover{border-color:var(--main);text-decoration:none}
 .question{font-size:19px;font-weight:800;line-height:1.7;margin:8px 0 14px}
@@ -235,6 +236,11 @@ form.inline{display:inline}
 """
 
 JS = """
+document.querySelectorAll('[data-sug]').forEach(function(box){var kw={};try{kw=JSON.parse(box.dataset.sug)}catch(x){}
+var ta=document.getElementById('k-body'),hint=document.querySelector('[data-sughint]');if(!ta)return;
+var f=function(){var t=ta.value,names=[];box.querySelectorAll('label.chk').forEach(function(l){var i=l.querySelector('input'),ws=kw[i.value]||[],hit=false;
+for(var j=0;j<ws.length;j++){if(ws[j]&&t.indexOf(ws[j])>=0){hit=true;break}}l.classList.toggle('sug',hit&&!i.checked);if(hit&&!i.checked)names.push(i.value)});
+if(hint)hint.textContent=names.length?'（候補: '+names.join('・')+'。合っていれば選んでください）':''};ta.addEventListener('input',f);box.addEventListener('change',f);f();});
 document.addEventListener('submit',function(ev){var f=ev.target;if(f.dataset&&f.dataset.confirm&&!window.confirm(f.dataset.confirm))ev.preventDefault();});
 document.querySelectorAll('input[data-secmap]').forEach(function(a){var m={};try{m=JSON.parse(a.dataset.secmap)}catch(x){}
 var s=document.getElementById(a.dataset.sec);if(!s)return;var f=function(){s.setAttribute('list',m[a.value]||'dl-sec-all')};a.addEventListener('input',f);f();});
@@ -358,7 +364,8 @@ def viewpoint_fields(cfg: dict, chosen) -> str:
         f'<label class="chk"><input type="checkbox" name="viewpoints" value="{e(v)}"{" checked" if v in chosen else ""}>{e(v)}</label>'
         for v in vps)
     extra = ", ".join(v for v in chosen if v not in vps)
-    return f"""<label class="f">観点</label><div class="chks">{checks}</div>
+    from . import web_suggest
+    return f"""<label class="f">観点 <span class="small muted" data-sughint></span></label><div class="chks" data-sug="{web_suggest.data_attr()}">{checks}</div>
 <input type="text" name="viewpoints_extra" value="{e(extra)}" placeholder="その他の観点（自由入力・カンマ区切り）" style="margin-top:8px">"""
 
 
@@ -447,9 +454,15 @@ def page_kakera_detail(kid: str) -> str:
 <tr><th>更新</th><td>{e(k.get("updated", "").replace("T", " "))}</td></tr>
 <tr><th>出どころ</th><td>{src_html}</td></tr></table>
 {f'<div class="btnrow"><a class="btn sm" href="{e("/coverage/" + quote(k["article"], safe=""))}">この記事の充足度</a></div>' if k.get("article") else ""}</div>
+{_suggest_card(k)}
 <div class="card"><h2>生成来歴</h2>{ref_html}</div>
 <div class="card"><h2>削除</h2><p class="small muted">削除の前に、このかけらを根拠にした段落・記事を確認します。</p>
 <a class="btn ng" href="/kakera/{e(k["id"])}/delete">削除の確認へ</a></div></div></div>"""
+
+
+def _suggest_card(k: dict) -> str:
+    from . import web_suggest
+    return web_suggest.card(k)
 
 
 def page_kakera_delete(kid: str) -> str:
@@ -1371,7 +1384,7 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 
 # 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
 # web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
-EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth", "web_sns", "web_thumb", "web_books", "web_reactions_csv")
+EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth", "web_sns", "web_thumb", "web_books", "web_reactions_csv", "web_suggest")
 
 
 def home_extra_cards() -> str:
