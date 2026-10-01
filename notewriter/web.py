@@ -219,6 +219,10 @@ pre.send{white-space:pre-wrap;word-break:break-word;background:#fbfdfe;border:2p
 .flag{font-size:13px;font-weight:700;color:var(--warm-dk);background:var(--warm-weak);border-radius:10px;padding:4px 10px;margin:6px 0 0}
 .sechead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:3px solid var(--main-weak);padding-bottom:4px;margin-top:22px}
 .example{background:var(--main-weak);border-radius:14px;padding:12px 16px;margin:0 0 12px;border-left:6px solid var(--main)}
+.pick-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);min-height:56px}
+.pick-row:hover{border-color:var(--main);text-decoration:none}
+.question{font-size:19px;font-weight:800;line-height:1.7;margin:8px 0 14px}
+.btn.big{min-height:54px;font-size:17px;padding:8px 28px}
 @media(max-width:600px){main{padding:14px 12px 50px}.card{padding:16px 14px;border-radius:16px}
 .card h2,.ribbon{margin-left:-22px}h1{font-size:20px}.btnrow .btn{flex:1}}
 """
@@ -234,7 +238,7 @@ i.addEventListener('change',function(){var n=[];for(var k=0;k<i.files.length;k++
 """
 
 NAV = (("home", "/", "ダッシュボード"), ("ideas", "/ideas", "ネタ出し"), ("neta", "/neta", "ネタ帳"),
-       ("kakera", "/kakera", "かけら"), ("articles", "/articles", "記事と充足度"), ("drafts", "/drafts", "下書き"), ("kabeuchi", "/kabeuchi", "壁打ち"), ("research", "/research", "リサーチ"),
+       ("interview", "/interview", "インタビュー"), ("kakera", "/kakera", "かけら"), ("articles", "/articles", "記事と充足度"), ("drafts", "/drafts", "下書き"), ("kabeuchi", "/kabeuchi", "壁打ち"), ("research", "/research", "リサーチ"),
        ("reactions", "/reactions", "反応記録"), ("publish", "/publish", "公開準備"), ("check", "/check", "チェッカー"), ("guide", "/guide", "使い方"))
 
 
@@ -1359,7 +1363,7 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 
 # 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
 # web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
-EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft")
+EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview")
 
 
 def _extensions(path: str):

@@ -22,6 +22,7 @@
   ./nw draft accept|discard JOB                        改稿の提案を採用／見送り
   ./nw style show|edit|edits                           文体ルール集（edit は $EDITOR か標準入力）と、手直しの記録
   ./nw kabeuchi start 記事 [--tmux]|status|stop 記事   壁打ち（確認実行でツール0を確かめてから claude --remote-control で起動）
+  ./nw interview 記事                                 1問ずつ答えると、かけらとして保存（空いている観点と [要追加] から質問）
   ./nw rdraft 記事 [--materials M0001,M0002]          リサーチ資料だけから比較表と下書き（資料IDつき・鮮度切れ警告）
   ./nw publish check|preview 記事|下書き.md            無料/有料の境界チェック（警告のみ）・note スマホプレビュー
   ./nw style suggest|candidates|adopt|reject           手直しから文体ルールの候補（採用したものだけ追記）
@@ -962,6 +963,37 @@ def cmd_rdraft(args) -> None:
     print(f"\nv{job['version']} として保存しました。確認してほしい印: {n} 件")
 
 
+def cmd_interview(args) -> None:
+    from . import interview as I
+    print("質問に答えると、かけらとして保存します。空行で確定、「s」でスキップ、「q」で終わります。")
+    while True:
+        q = I.next_question(args.article)
+        if q is None:
+            print("今は質問がありません（空いている観点と [要追加] がなくなりました）。")
+            return
+        print(f"\n[区間「{q['section']}」／{q['kind']}] {q['text']}")
+        lines: List[str] = []
+        while True:
+            try:
+                line = input("> " if not lines else "  ")
+            except EOFError:
+                line = ""
+                if not lines:
+                    return
+            if not lines and line.strip() in ("q", "ｑ"):
+                return
+            if not lines and line.strip() in ("s", "ｓ"):
+                I.skip(args.article, q["key"])
+                print("スキップしました。")
+                break
+            if not line.strip():
+                if lines:
+                    k = I.answer(args.article, q["key"], "\n".join(lines))
+                    print(f"かけら {k['id']} として保存しました。")
+                break
+            lines.append(line)
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1163,6 +1195,9 @@ def build_parser() -> argparse.ArgumentParser:
     a = sub.add_parser("rdraft", help="リサーチ資料だけから比較表と下書きを作る（yes で実行）")
     a.add_argument("article"); a.add_argument("--materials", default="", help="使う資料ID（カンマ区切り。省略で記事の資料すべて）")
     a.add_argument("--show-prompt", action="store_true"); a.set_defaults(func=cmd_rdraft)
+
+    a = sub.add_parser("interview", help="インタビュー（1問ずつ答えると、かけらとして保存）")
+    a.add_argument("article"); a.set_defaults(func=cmd_interview)
 
     pb = sub.add_parser("publish", help="公開準備（境界チェック・プレビュー）").add_subparsers(dest="sub", required=True)
     a = pb.add_parser("check", help="無料/有料の境界チェック（警告のみ。警告があれば終了コード1）")
