@@ -15,7 +15,7 @@
   ./nw ideas run [--show-prompt]              ネタ出し（渡す文章の文字数と材料の件数を表示し、yes で実行）
   ./nw ideas list [--status 未検討]|set CID 状態|to-research CID...
   ./nw skills show|edit                       得意・経験リスト（edit は $EDITOR か標準入力）
-  ./nw reaction add|list                      反応記録（スキ・コメント・購入の数を手で記録）
+  ./nw reaction add|list|import                      反応記録（スキ・コメント・購入の数を手で記録）
   ./nw draft list|show|versions|diff|restore|save ...   体験談の下書き（版の一覧・差分・手直しの保存）
   ./nw draft generate 記事 区間 [--show-prompt]         区間の下書きを作る（かけらだけ・ツールなし。yes で実行）
   ./nw draft revise 記事 段落番号 指示 [--show-prompt]  段落の書き直しを提案させる（採用するまで本文は変わらない）
@@ -1158,6 +1158,25 @@ def cmd_book_analyze(args) -> None:
     print(f"候補を {len(job['added'])} 件追加しました（./nw style candidates で確認し、adopt / reject）。")
 
 
+def cmd_reaction_import(args) -> None:
+    from . import reactions_csv as RC
+    r = RC.parse(RC.decode(Path(args.file).read_bytes()), args.recorded)
+    print("列の対応: " + "、".join(f"{k} ← {v}" for k, v in r["mapping"].items()))
+    for x in r["rows"][:20]:
+        print(f"  {x['title'][:30]}  スキ {x['likes']}・コメント {x['comments']}・購入 {x['purchases']}")
+    if len(r["rows"]) > 20:
+        print(f"  …ほか {len(r['rows']) - 20} 件")
+    for n, m in r["errors"]:
+        print(f"  ⚠ {n}行目: {m}")
+    if not r["rows"]:
+        sys.exit("取り込める行がありません。")
+    if not _ask_yes(f"{len(r['rows'])} 件を記録しますか？ 記録するなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("記録しませんでした。")
+        sys.exit(1)
+    added, skipped = RC.import_rows(r["rows"])
+    print(f"{added} 件を記録しました" + (f"（同じ記録 {skipped} 件は飛ばしました）" if skipped else "") + "。")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1322,6 +1341,9 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--memo", default="")
     a.set_defaults(func=cmd_reaction_add)
     rx.add_parser("list", help="記事ごとの一覧").set_defaults(func=cmd_reaction_list)
+    a = rx.add_parser("import", help="CSV から取り込む（読み取った内容を表示し、yes で記録）")
+    a.add_argument("file"); a.add_argument("--recorded", default="", help="記録日（省略で今日）")
+    a.set_defaults(func=cmd_reaction_import)
     d = sub.add_parser("draft", help="体験談の下書き（作成・改稿・版）").add_subparsers(dest="sub", required=True)
     d.add_parser("list", help="下書きのある記事と最新の版").set_defaults(func=cmd_draft_list)
     a = d.add_parser("generate", help="区間の下書きを作る（かけらだけ・ツールなし。yes で実行）")

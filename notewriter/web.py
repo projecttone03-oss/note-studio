@@ -1371,7 +1371,7 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 
 # 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
 # web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
-EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth", "web_sns", "web_thumb", "web_books")
+EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth", "web_sns", "web_thumb", "web_books", "web_reactions_csv")
 
 
 def home_extra_cards() -> str:
@@ -1627,7 +1627,9 @@ def page_reactions() -> str:
 <p class="muted">公開した記事の反応（スキ・コメント・購入）を、数えた日ごとに手で記録します。記事ごと・反応がよかった順に並びます。
 ネタ出しには「反応がよかった順」の<b>タイトルと数だけ</b>を渡します（メモは渡しません）。</p>
 <div class="grid"><div>{"".join(titles) or '<div class="card"><p class="muted">まだ記録がありません。</p></div>'}</div>
-<div><div class="card warm"><h2>記録を追加</h2>{reaction_form({}, "/reactions/new", "追加する")}</div></div></div>"""
+<div><div class="card warm"><h2>記録を追加</h2>{reaction_form({}, "/reactions/new", "追加する")}</div>
+<div class="card"><h2>CSV から取り込む</h2><p class="small">書き出した CSV があれば、まとめて取り込めます（取り込む前に確認できます）。</p>
+<a class="btn" href="/reactions/import">CSV を取り込む</a></div></div></div>"""
 
 
 def ideas_home_card() -> str:
