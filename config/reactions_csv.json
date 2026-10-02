@@ -1,0 +1,16 @@
+{
+  "_説明": [
+    "反応記録の CSV 取り込み（/reactions/import・./nw reaction import）の列名。note の CSV の列名は未確認なので、",
+    "実際のファイルの1行目（見出し）に合わせて、ここの候補に足してください。大文字小文字・空白・全角半角の違いは無視します。",
+    "views など反応記録にない列は、メモに「閲覧数: 123」の形で入れます（memo_columns）。"
+  ],
+  "columns": {
+    "title": ["タイトル", "記事タイトル", "記事名", "記事", "title"],
+    "published": ["公開日", "投稿日", "公開日時", "published", "date"],
+    "likes": ["スキ", "スキ数", "いいね", "likes"],
+    "comments": ["コメント", "コメント数", "comments"],
+    "purchases": ["購入数", "販売数", "売上数", "購入", "purchases", "sales"]
+  },
+  "memo_columns": {"閲覧数": ["ビュー", "閲覧数", "PV", "views"]},
+  "max_rows": 2000
+}

@@ -65,9 +65,11 @@ macOS 標準の Python 3.9 以上。追加インストール不要（標準ラ�
 
 ---
 
-# notewriter（体験談・リサーチ型記事の制作支援、SPEC.md 第1段階）
+# notewriter（体験談・リサーチ型記事の制作支援、SPEC.md の機能1〜14）
 
-仕様は `SPEC.md`。今あるのは **かけら管理** と **コンプライアンスチェッカー**（警告を出すだけで、本文は書き換えない）。
+仕様は `SPEC.md`。かけら管理・インタビュー・コンプライアンスチェッカー・下書き（体験談／リサーチ型）・壁打ち・文体学習・
+公開準備（境界チェック・プレビュー・値付け・クロスセル・サムネイル）・SNS 導線・反応記録・執筆ペースがある。
+どれも「提案・警告・下書き」までで、採用・公開・送信は人が行う（自動投稿・自動書き換えはしない）。
 
 ```
 ./nw init                      # 作業フォルダ（既定 workspace/）を作る。本番は gocryptfs のマウント先で
@@ -81,7 +83,40 @@ NW_DATA_DIR=~/nw-data ./nw serve --host 100.x.y.z   # 画面（既定 127.0.0.1:
 ./nw research list|show|import|usage|key set   # 資料・今月の費用・Perplexity の APIキー
 ./nw skills show|edit          # 得意・経験リスト（作業フォルダに保存）
 ./nw reaction add|list         # 反応記録（手入力）
+./nw draft generate 記事 区間    # 体験談の下書き（その区間のかけらだけ・ツールなし。送る前に yes で確認）
+./nw draft show|versions|diff|restore|save   # 下書きの表示（段落番号・根拠・要確認の印）と版
+./nw draft revise 記事 段落番号 "指示"      # 段落の書き直しを提案させる（採用するまで本文は変わらない）
+./nw style show|edit|edits     # 文体ルール集と、AIの段落を人が直した記録
+./nw style suggest|candidates|adopt|reject   # 手直しから文体ルールの候補（採用したものだけルール集に追記）
+./nw book add|list|find|analyze              # 参考書籍の PDF（文字はアプリが取り出す）から文体ルールの候補
+./nw kabeuchi start 記事 [--tmux]|status|stop # 壁打ち（確認実行でツール0を確かめてから claude --remote-control で起動）
+./nw interview 記事             # 1問ずつ答えると、かけらとして保存
+./nw rdraft 記事 [--materials M0001,…]       # リサーチ資料だけから比較表と下書き（資料IDつき・鮮度切れ警告）
+./nw publish check|preview 記事 # 無料/有料の境界チェック・note スマホプレビュー
+./nw price 記事   ./nw crosssell 記事   ./nw published add|list|rm   ./nw pace
+./nw thumb 記事                 # サムネイル 1280×670（SVG・HTML、playwright か Chromium があれば PNG）
+./nw sns list|draft|new|open|posted|health   # SNS（投稿はしない。Web Intent の URL を出すだけ）
+./nw reaction import note.csv   # 反応記録を CSV から（取り込む前に確認）
+./nw kakera suggest K0001       # 観点タグの候補
 ```
+
+画面: ダッシュボードの「すぐやる」「次にやること」から始める。メニューは 集める・調べる・書く・届ける のまとまり。
+スマホでは画面の下のタブ（ホーム・書く・答える・下書き・メニュー）を使う。
+
+壁打ち（SPEC.md 機能4・絶対4）:
+- 記事ごとに1つ、対話セッション方式 `claude --remote-control nw-記事名` で起動する（サーバーモード `claude remote-control` と `--bare` は使わない）。
+- 起動の直前に、同じフラグ・同じ材料ファイルで `-p` の確認実行をし、init のツールが0個・MCPなしであることを確かめる。確かめられなければ起動しない。
+- 材料（かけら・下書き・文体ルール）は作業フォルダの中のファイルを `--append-system-prompt-file` で渡す。
+- 会話の履歴は `~/.claude/projects/` に残る。VPS ではここも暗号化フォルダの中に置く（`notewriter/ops/README.md`）。
+- Remote Control の会話は Anthropic のサーバーに保存される（30日／モデル改善を許可していれば5年）。Trusted Devices を有効にする。
+
+VPS の準備（暗号化・スワップ・バックアップ・復元テスト）: `notewriter/ops/README.md`（**未検証**。スクリプトは bash -n のみ）。
+
+下書き（SPEC.md 第2段階の前半）:
+- 本文は区間ごとに、その区間に割り当てたかけら（「保留」は除く）だけから作る。足りない所は `[要追加：〜]`。
+- 段落ごとに根拠のかけらIDを表示し、根拠のかけらに見当たらない数字・セリフ・カタカナ語には「要確認」の印を付ける（警告だけで本文は変えない。機械的な目安なので、最終確認は人）。
+- 作成・改稿・人の手直し・版の復元は、すべて版として残る。本文確定のたびに生成来歴を記録する。
+- 下書きファイル（`drafts/`）をエディタで直接直した場合は、`./nw draft save` で版にするまで作成・改稿を止める（手直しが消えないように）。
 
 流れ: ネタ出し（Claude、Web検索なし）→ 候補を選ぶ（人）→ トレンド調査（Claude／Perplexity）→ 深掘り調査。
 - 外に送る文章は、送る前に全文を表示し、ぼかすべき語があれば警告する。かけらはネタ出し・リサーチに使わない。

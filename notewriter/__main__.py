@@ -2,7 +2,7 @@
 
   ./nw init                                   作業フォルダと目印を作る（本番は gocryptfs のマウント先で）
   ./nw serve [--host H] [--port 8766] [--open]
-  ./nw kakera add|list|search|show|rm ...
+  ./nw kakera add|list|search|show|suggest|rm ...
   ./nw neta add|list|promote ...
   ./nw article add|list ...
   ./nw coverage 記事名
@@ -15,7 +15,22 @@
   ./nw ideas run [--show-prompt]              ネタ出し（渡す文章の文字数と材料の件数を表示し、yes で実行）
   ./nw ideas list [--status 未検討]|set CID 状態|to-research CID...
   ./nw skills show|edit                       得意・経験リスト（edit は $EDITOR か標準入力）
-  ./nw reaction add|list                      反応記録（スキ・コメント・購入の数を手で記録）
+  ./nw reaction add|list|import                      反応記録（スキ・コメント・購入の数を手で記録）
+  ./nw draft list|show|versions|diff|restore|save ...   体験談の下書き（版の一覧・差分・手直しの保存）
+  ./nw draft generate 記事 区間 [--show-prompt]         区間の下書きを作る（かけらだけ・ツールなし。yes で実行）
+  ./nw draft revise 記事 段落番号 指示 [--show-prompt]  段落の書き直しを提案させる（採用するまで本文は変わらない）
+  ./nw draft accept|discard JOB                        改稿の提案を採用／見送り
+  ./nw style show|edit|edits                           文体ルール集（edit は $EDITOR か標準入力）と、手直しの記録
+  ./nw kabeuchi start 記事 [--tmux]|status|stop 記事   壁打ち（確認実行でツール0を確かめてから claude --remote-control で起動）
+  ./nw interview 記事                                 1問ずつ答えると、かけらとして保存（空いている観点と [要追加] から質問）
+  ./nw rdraft 記事 [--materials M0001,M0002]          リサーチ資料だけから比較表と下書き（資料IDつき・鮮度切れ警告）
+  ./nw price 記事|下書き.md   ./nw crosssell 記事   ./nw pace   ./nw published add|list|rm
+                                              値付けの目安・記事末尾の案内文・執筆ペース・公開した記事の登録
+  ./nw sns list|draft|new|open|posted|health          SNS（投稿文・Web Intent の URL・投稿の記録・直接宣伝の割合・月1の健康診断）
+  ./nw thumb 記事 [--title T] [--keyword K]          サムネイル（SVG・HTML、playwright か Chromium があれば PNG）
+  ./nw publish check|preview 記事|下書き.md            無料/有料の境界チェック（警告のみ）・note スマホプレビュー
+  ./nw book add|list|find|analyze                     参考書籍（PDF の文字はアプリが取り出し、候補は人が採用）
+  ./nw style suggest|candidates|adopt|reject           手直しから文体ルールの候補（採用したものだけ追記）
 
 作業フォルダが使えない（未初期化・未マウント）ときは終了コード2。check と rules は作業フォルダなしでも動く。
 """
@@ -624,6 +639,558 @@ def cmd_skills_edit(args) -> None:
     print(f"得意・経験リストを保存しました（{len(text.strip())}字）")
 
 
+def _writing():
+    from . import writing
+    return writing
+
+
+def _print_blocks(blocks, show_flags: bool = True) -> None:
+    for i, b in enumerate(blocks):
+        if b.get("kind") == "heading":
+            print(f"\n[{i}] {b['text']}")
+            continue
+        cite = "、".join(b.get("kakera") or []) or "根拠なし"
+        who = {"ai": "AI", "human": "人"}.get(b.get("origin"), b.get("origin") or "")
+        print(f"\n[{i}]（{who}／根拠: {cite}）\n{b['text']}")
+        if show_flags:
+            for f in b.get("flags") or []:
+                print(f"    ⚠ {f}")
+
+
+def _draft_confirm(p: dict, what: str, show_prompt: bool) -> None:
+    if show_prompt:
+        print("===== Claude に渡す文章（これが全文です） =====")
+        print(p["prompt"])
+        print("===== ここまで =====\n")
+    print(f"{what}")
+    print(f"Claude に渡す文章: {p['chars']}字（全文は --show-prompt で表示）")
+    print(f"材料のかけら: {'、'.join(p['kakera_ids'])}（この区間のもの。「保留」は除く）")
+    print("ツールなし・Web検索なし・MCPなしの別セッションで、指示とかけらは標準入力で渡します。")
+    if p.get("replaces"):
+        print("※ この区間のいまの本文は置き換わります（前の版は残るので戻せます）。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+
+
+def _job_failed(W, job: dict) -> None:
+    if job.get("status") == "limit":
+        print(_safe(job.get("error") or W.limit_message()), file=sys.stderr)
+        sys.exit(3)
+    print(f"うまくいきませんでした: {_safe(job.get('error') or '理由は分かりませんでした')}", file=sys.stderr)
+    sys.exit(1)
+
+
+def cmd_draft_list(args) -> None:
+    W = _writing()
+    rows = W.list_drafts()
+    if not rows:
+        print("記事がありません（./nw article add で記事と区間を登録）")
+    for r in rows:
+        lt = r["latest"]
+        state = f"v{lt['v']}（{W.SOURCES.get(lt['source'], lt['source'])}・{lt['created']}）" if lt else "下書きなし"
+        changed = "  ※ファイルが直接編集されています（./nw draft save で版にする）" if lt and W.file_changed(r["article"]) else ""
+        print(f"{r['article']}  {state}{changed}")
+
+
+def cmd_draft_generate(args) -> None:
+    W = _writing()
+    p = W.prepare_generate(args.article, args.section)
+    _draft_confirm(p, f"記事「{p['article']}」の区間「{p['section']}」の下書きを作ります。", args.show_prompt)
+    print("下書きを書いています（1〜数分かかることがあります）…", flush=True)
+    job = W.run_job(p, p["confirm_token"])
+    if job.get("status") == "conflict":
+        print(_safe(job["error"]), file=sys.stderr)
+        print(f"結果を入れるなら: ./nw draft accept {job['id']}", file=sys.stderr)
+        sys.exit(1)
+    if job.get("status") != "done":
+        _job_failed(W, job)
+    cur = W.current(p["article"])
+    rng = W._section_range(cur["blocks"], p["section"])
+    blocks = cur["blocks"][rng[0]:rng[1]] if rng else []
+    print(f"v{job['version']} として保存しました（{W.draft_path(p['article'])}）。")
+    _print_blocks(blocks)
+    n = sum(len(b.get("flags") or []) for b in blocks)
+    print(f"\n確認してほしい印: {n} 件（かけらと照らして、人が判断してください）")
+
+
+def cmd_draft_show(args) -> None:
+    W = _writing()
+    data = W.get_version(args.article, args.version) if args.version else W.current(args.article)
+    if data is None:
+        print("まだ下書きがありません（./nw draft generate 記事 区間）")
+        return
+    m = data["meta"]
+    print(f"{args.article} v{m['v']}（{W.SOURCES.get(m['source'], m['source'])}・{m['created']}）{m.get('note', '')}")
+    _print_blocks(data["blocks"])
+
+
+def cmd_draft_versions(args) -> None:
+    W = _writing()
+    for m in W.versions(args.article):
+        extra = f" 来歴{m['provenance_id']}" if m.get("provenance_id") else ""
+        print(f"v{m['v']}  {m['created']}  {W.SOURCES.get(m['source'], m['source'])}  {m.get('note', '')}{extra}")
+
+
+def cmd_draft_diff(args) -> None:
+    for o in _writing().diff(args.article, args.a, args.b):
+        if o["op"] == "equal":
+            continue
+        for t in o["old"]:
+            print("- " + t.replace("\n", "\n- "))
+        for t in o["new"]:
+            print("+ " + t.replace("\n", "\n+ "))
+        print()
+
+
+def cmd_draft_restore(args) -> None:
+    m = _writing().restore(args.article, args.version)
+    print(f"v{args.version} の内容を v{m['v']} として保存しました。")
+
+
+def cmd_draft_save(args) -> None:
+    W = _writing()
+    text = W.draft_path(args.article).read_text(encoding="utf-8") if not args.stdin else sys.stdin.read()
+    m = W.save_human_edit(args.article, text, args.note)
+    print(f"手直しを v{m['v']} として保存しました。")
+
+
+def cmd_draft_revise(args) -> None:
+    W = _writing()
+    p = W.prepare_revise(args.article, args.block, args.instruction)
+    print(f"直す段落 [{p['block']}]:\n{p['old_text']}\n")
+    _draft_confirm(p, f"指示「{p['instruction']}」で、この段落の書き直しを提案させます（採用するまで本文は変わりません）。",
+                   args.show_prompt)
+    print("書き直しを考えています…", flush=True)
+    job = W.run_job(p, p["confirm_token"])
+    if job.get("status") != "done":
+        _job_failed(W, job)
+    prop = job["proposal"]
+    print(f"\n提案（{job['id']}／根拠: {'、'.join(prop.get('kakera') or []) or 'なし'}）:\n{prop['text']}")
+    for f in prop.get("flags") or []:
+        print(f"    ⚠ {f}")
+    if _ask_yes("\nこの提案を本文に入れますか？ 入れるなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        m = W.accept_revision(job["id"])
+        print(f"v{m['v']} として保存しました。")
+    else:
+        print(f"入れていません。あとで入れるなら: ./nw draft accept {job['id']}")
+
+
+def cmd_draft_accept(args) -> None:
+    W = _writing()
+    job = W.get_job(args.job)
+    m = W.apply_conflicted(args.job) if job.get("status") == "conflict" else W.accept_revision(args.job)
+    print(f"v{m['v']} として保存しました。")
+
+
+def cmd_draft_discard(args) -> None:
+    _writing().discard(args.job)
+    print("見送りました（本文は変わっていません）。")
+
+
+def cmd_style_show(args) -> None:
+    print(_writing().get_style())
+
+
+def cmd_style_edit(args) -> None:
+    import shlex
+    import subprocess
+    import tempfile
+    W = _writing()
+    editor = os.environ.get("VISUAL") or os.environ.get("EDITOR")
+    if editor and sys.stdin.isatty():
+        d = W.style_path().parent  # 一時ファイルも作業フォルダ（暗号化境界）の内側に作る
+        d.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(prefix=".style-edit-", suffix=".md", dir=str(d))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(W.get_style())
+            if subprocess.call(shlex.split(editor) + [tmp]) != 0:
+                sys.exit("エディタが正常に終わらなかったため、保存しませんでした。")
+            text = Path(tmp).read_text(encoding="utf-8")
+        finally:
+            try:
+                os.unlink(tmp)
+            except FileNotFoundError:
+                pass
+    else:
+        if sys.stdin.isatty():
+            sys.exit("$EDITOR を設定するか、標準入力から流し込んでください（例: ./nw style edit < rules.md）。")
+        text = sys.stdin.read()
+    W.save_style(text)
+    print(f"文体ルール集を保存しました（{W.style_path()}）")
+
+
+def cmd_style_edits(args) -> None:
+    edits = _writing().list_edits()
+    if not edits:
+        print("まだ記録がありません（AI が書いた段落を人が直すと記録されます）。")
+    for x in edits[-args.limit:]:
+        print(f"--- {x.get('at')} {x.get('article')}／{x.get('section')}（v{x.get('version')}）")
+        print(f"AI: {x.get('ai')}\n人: {x.get('human')}")
+
+
+def cmd_style_suggest(args) -> None:
+    from . import style_learn as S
+    p = S.prepare_from_edits()
+    if args.show_prompt:
+        print("===== Claude に渡す文章（これが全文です） =====")
+        print(p["prompt"])
+        print("===== ここまで =====\n")
+    print(f"手直しの記録 {p['count']} 組から、文体ルールの候補を出させます（{p['chars']}字。全文は --show-prompt）。")
+    print("ツールなし・Web検索なし・MCPなしの別セッションで、標準入力で渡します。候補は採用するまで反映しません。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+    job = S.run_from_edits(p["confirm_token"])
+    if job.get("status") != "done":
+        _job_failed(_writing(), job)
+    print(f"候補を {len(job.get('added') or [])} 件追加しました。./nw style candidates で確認してください。")
+
+
+def cmd_style_candidates(args) -> None:
+    from . import style_learn as S
+    items = S.list_candidates("" if args.all else "未検討")
+    if not items:
+        print("（未検討の候補はありません）")
+    for c in items:
+        print(f"{c['id']} [{c['status']}] {c['rule']}")
+        if c.get("reason"):
+            print(f"    理由: {c['reason']}")
+        for f in c.get("flags") or []:
+            print(f"    ⚠ {f}")
+
+
+def cmd_style_adopt(args) -> None:
+    from . import style_learn as S
+    c = S.adopt(args.cid, args.text)
+    print(f"{c['id']} を採用し、文体ルール集に追記しました: {c['rule']}")
+
+
+def cmd_style_reject(args) -> None:
+    from . import style_learn as S
+    S.reject(args.cid)
+    print(f"{args.cid} を却下しました。")
+
+
+def cmd_kabeuchi_start(args) -> None:
+    from . import kabeuchi as KB
+    use_tmux = bool(args.tmux)
+    if use_tmux and not KB.tmux_path():
+        sys.exit("tmux が見つかりません（--tmux を外すと、この端末で起動します）。")
+    print("起動と同じフラグ・同じ材料ファイルで確認実行しています…", flush=True)
+    info = KB.start(args.article, use_tmux=use_tmux)
+    print(f"確認実行 OK: ツール {len(info['preflight']['tools'])} 個・MCP なし（{info['preflight']['at']}）")
+    print("注意: Remote Control の会話は全文が Anthropic のサーバーに保存されます（30日／モデル改善を許可していれば5年）。")
+    print("      この機械にも ~/.claude/projects/ に履歴が残ります（VPS では暗号化フォルダの中に置くこと）。")
+    if info["tmux"]:
+        print(f"tmux で起動しました。スマホの Claude アプリで「{info['session']}」を開いてください。止めるには ./nw kabeuchi stop 記事名")
+        return
+    print(f"この端末で起動します。スマホの Claude アプリで「{info['session']}」を開けます。", flush=True)
+    os.chdir(info["cwd"])
+    os.execvpe(info["argv"][0], info["argv"], KB.launch_env())
+
+
+def cmd_kabeuchi_status(args) -> None:
+    from . import kabeuchi as KB
+    rows = KB.overview()
+    if not rows:
+        print("記事がありません（./nw article add で登録）")
+    for r in rows:
+        pf = r["preflight"]
+        print(f"{r['article']}  {'起動中' if r['running'] else '停止'}  名前: {r['session']}"
+              + (f"  確認実行: {pf['at']}" if pf else ""))
+
+
+def cmd_kabeuchi_stop(args) -> None:
+    from . import kabeuchi as KB
+    print("止めました。" if KB.stop(args.article) else "起動していませんでした。")
+
+
+def _publish_source(target: str) -> Tuple[str, str]:
+    """記事名か Markdown ファイルのパスから (名前, 本文)。"""
+    p = Path(target)
+    if p.suffix.lower() == ".md" and p.is_file():
+        return p.stem, p.read_text(encoding="utf-8")
+    W = _writing()
+    dp = W.draft_path(target)
+    if not dp.is_file():
+        raise ValueError(f"「{target}」の下書きも、そのファイルも見つかりません。")
+    return target, dp.read_text(encoding="utf-8")
+
+
+def cmd_publish_check(args) -> None:
+    from . import publish as P
+    name, text = _publish_source(args.target)
+    fs = P.check_boundary(text)
+    if not fs:
+        print(f"{name}: 境界チェックの警告はありません。")
+    for f in fs:
+        print(f"[{P.SEVERITY[f['severity']]}] {f['line'] or '-'}行目: {f['message']}")
+    if any(f["severity"] != "info" for f in fs):
+        sys.exit(1)
+
+
+def cmd_publish_preview(args) -> None:
+    from . import publish as P
+    name, text = _publish_source(args.target)
+    out = Path(args.out) if args.out else store.vault() / "exports" / f"{_writing().slug(name)}-preview.html"
+    store.atomic_write(out, P.preview_page(text, name, args.price or "", P.check_boundary(text)))
+    print(f"プレビューを書き出しました: {out}（ブラウザで開いてください。下書きの本文を含むので扱いに注意）")
+
+
+def cmd_rdraft(args) -> None:
+    from . import research_writing as RW
+    ids = [x.strip() for x in (args.materials or "").split(",") if x.strip()] or None
+    p = RW.prepare(args.article, ids)
+    if args.show_prompt:
+        print("===== Claude に渡す文章（これが全文です） =====")
+        print(p["prompt"])
+        print("===== ここまで =====\n")
+    print(f"記事「{p['article']}」の比較表と下書きを、資料 {'、'.join(p['material_ids'])} だけから作ります（{p['chars']}字）。")
+    for st in p["stale"]:
+        print(f"※ 鮮度切れの資料: {st['id']}（調べた日 {st['researched_at']}・{st['age_days']}日前）")
+    if p["replaces"]:
+        print("※ いまの下書きの本文は置き換わります（前の版は残るので戻せます）。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+    job = RW.run(args.article, ids, p["confirm_token"])
+    if job.get("status") == "conflict":
+        print(_safe(job["error"]), file=sys.stderr)
+        sys.exit(1)
+    if job.get("status") != "done":
+        _job_failed(_writing(), job)
+    W = _writing()
+    blocks = W.current(p["article"])["blocks"]
+    _print_blocks(blocks)
+    n = sum(len(b.get("flags") or []) for b in blocks)
+    print(f"\nv{job['version']} として保存しました。確認してほしい印: {n} 件")
+
+
+def cmd_interview(args) -> None:
+    from . import interview as I
+    print("質問に答えると、かけらとして保存します。空行で確定、「s」でスキップ、「q」で終わります。")
+    while True:
+        q = I.next_question(args.article)
+        if q is None:
+            print("今は質問がありません（空いている観点と [要追加] がなくなりました）。")
+            return
+        print(f"\n[区間「{q['section']}」／{q['kind']}] {q['text']}")
+        lines: List[str] = []
+        while True:
+            try:
+                line = input("> " if not lines else "  ")
+            except EOFError:
+                line = ""
+                if not lines:
+                    return
+            if not lines and line.strip() in ("q", "ｑ"):
+                return
+            if not lines and line.strip() in ("s", "ｓ"):
+                I.skip(args.article, q["key"])
+                print("スキップしました。")
+                break
+            if not line.strip():
+                if lines:
+                    k = I.answer(args.article, q["key"], "\n".join(lines))
+                    print(f"かけら {k['id']} として保存しました。")
+                break
+            lines.append(line)
+
+
+def cmd_price(args) -> None:
+    from . import pricing
+    _, text = _publish_source(args.target)
+    r = pricing.suggest(text)
+    print(f"目安: {r['low']}〜{r['high']}円（{r['summary']}）")
+    for x in r["reasons"]:
+        print("  " + x)
+    print("文字数と情報密度から機械的に出した目安です。価格は自分で決めてください。")
+
+
+def cmd_published_add(args) -> None:
+    from . import published
+    x = published.add(title=args.title, url=args.url, price=args.price, tags=args.tags, published=args.published,
+                      summary=args.summary, article=args.article)
+    print(f"{x['id']} として登録しました: {x['title']}")
+
+
+def cmd_published_list(args) -> None:
+    from . import published
+    items = published.list_published()
+    if not items:
+        print("（公開した記事の登録はまだありません）")
+    for x in items:
+        price = "無料" if not x["price"] else f"{x['price']}円"
+        print(f"{x['id']}  {x['published']}  {price}  {x['title']}  {x.get('url', '')}  [{'、'.join(x.get('tags') or [])}]")
+
+
+def cmd_published_rm(args) -> None:
+    from . import published
+    published.delete(args.id)
+    print(f"{args.id} の登録を削除しました。")
+
+
+def cmd_crosssell(args) -> None:
+    from . import published
+    name, text = _publish_source(args.target)
+    cs = published.crosssell_text(published.title_of(text, name), exclude_article=name)
+    print(cs or "近い公開済みの記事が見つかりませんでした（./nw published add で登録・タグを付けると出ます）。")
+
+
+def cmd_pace(args) -> None:
+    from . import pace
+    s = pace.summary()
+    print(s["headline"])
+    print(s["total"])
+    for w in s["weeks"]:
+        print(f"  {w['start'].strftime('%m/%d')}〜  かけら {w['kakera']:>2}  ネタ {w['neta']:>2}  公開 {w['published']:>2}")
+
+
+def cmd_sns_list(args) -> None:
+    from . import sns
+    for x in sns.list_posts("" if args.all else "下書き"):
+        print(f"--- {x['id']} [{x['platform']}／{x['type']}／{x['status']}{' ' + x['posted_at'] if x['posted_at'] else ''}] {x.get('article', '')}")
+        print(x["text"])
+        for f in [f for f in x.get("flags", []) if not f.startswith("長すぎ")] + sns.length_flags(x["platform"], x["text"]):
+            print(f"    ⚠ {f}")
+    pr = sns.promo_ratio()
+    print(f"\n直近{pr['days']}日: 投稿 {pr['total']} 件・直接宣伝 {pr['promo']} 件（{pr['ratio'] * 100:.0f}%／目安 {pr['max'] * 100:.0f}% 以下）"
+          + ("  ⚠ 直接宣伝が多めです" if pr["over"] else ""))
+    due = sns.health_due()
+    if due:
+        print(f"今月の健康診断がまだです: {'、'.join(due)}（./nw sns health）")
+
+
+def cmd_sns_draft(args) -> None:
+    from . import sns
+    p = sns.prepare(args.article, args.type)
+    if args.show_prompt:
+        print(p["prompt"])
+    print(f"記事「{args.article}」の無料エリアから、型「{args.type}」の投稿文を作らせます（{p['chars']}字。有料部分・かけらは渡しません）。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+    job = sns.run(args.article, args.type, p["confirm_token"])
+    if job.get("status") != "done":
+        _job_failed(_writing(), job)
+    print(f"下書きを {len(job['added'])} 件作りました（./nw sns list）。")
+
+
+def cmd_sns_new(args) -> None:
+    from . import sns
+    x = sns.add_post(args.platform, args.type, args.text if args.text else sys.stdin.read())
+    print(f"{x['id']} を下書きとして保存しました。")
+
+
+def cmd_sns_open(args) -> None:
+    from . import sns
+    x = sns.get_post(args.id)
+    print("次の URL を開くと、本文入力済みの投稿画面が出ます（送信は自分で押してください）:")
+    print(sns.intent_url(x["platform"], x["text"]))
+
+
+def cmd_sns_posted(args) -> None:
+    from . import sns
+    x = sns.mark_posted(args.id, args.date)
+    print(f"{x['id']} を投稿済み（{x['posted_at']}）として記録しました。")
+
+
+def cmd_sns_health(args) -> None:
+    from . import sns
+    rec = sns.save_health(args.month, args.platform, {"bookmarks": args.bookmarks, "profile_clicks": args.profile_clicks,
+                                                      "impressions": args.impressions})
+    print(f"{rec['month']} {rec['platform']} の健康診断を保存しました。")
+
+
+def cmd_thumb(args) -> None:
+    from . import published, thumbnail as T
+    W = _writing()
+    W._article(args.article)
+    title = args.title
+    if not title:
+        p = W.draft_path(args.article)
+        title = published.title_of(p.read_text(encoding="utf-8"), args.article) if p.is_file() else args.article
+    names = [x for x in (args.templates or "").split(",") if x] or [t["name"] for t in T.config()["templates"]]
+    out = T.generate(args.article, title, names, args.keyword or None, png=not args.no_png)
+    for o in out:
+        print(f"{o['name']}: {o['svg']}  {o['html']}  {o['png'] or '（PNG なし）'}")
+    print(f"保存先: {T._dir(args.article)}")
+    if not T.png_engine():
+        print("PNG を作る道具（playwright か Chromium）が見つからないため、SVG と HTML だけ作りました。")
+
+
+def cmd_book_add(args) -> None:
+    from . import books
+    p = Path(args.file)
+    b = books.add_book(p.name, p.read_bytes(), args.title)
+    print(f"{b['id']}「{b['title']}」を取り込みました（{b['pages']}ページ・{b['extractor']}）。")
+
+
+def cmd_book_list(args) -> None:
+    from . import books
+    items = books.list_books()
+    if not items:
+        print("（参考書籍はまだありません）")
+    for b in items:
+        print(f"{b['id']}  {b['pages']}ページ  {b['title']}")
+
+
+def cmd_book_find(args) -> None:
+    from . import books
+    for page, text in books.find(args.id, args.words):
+        print(f"p.{page}  …{text}…")
+
+
+def cmd_book_analyze(args) -> None:
+    from . import books
+    p = books.prepare(args.id, args.start, args.end, args.focus)
+    if args.show_prompt:
+        print(p["prompt"])
+    print(f"{args.id} の p.{args.start}〜{args.end} の文字から、書き方の手法を候補として出させます（{p['chars']}字）。")
+    if not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+    job = books.run(args.id, args.start, args.end, args.focus, p["confirm_token"])
+    if job.get("status") != "done":
+        _job_failed(_writing(), job)
+    print(f"候補を {len(job['added'])} 件追加しました（./nw style candidates で確認し、adopt / reject）。")
+
+
+def cmd_reaction_import(args) -> None:
+    from . import reactions_csv as RC
+    r = RC.parse(RC.decode(Path(args.file).read_bytes()), args.recorded)
+    print("列の対応: " + "、".join(f"{k} ← {v}" for k, v in r["mapping"].items()))
+    for x in r["rows"][:20]:
+        print(f"  {x['title'][:30]}  スキ {x['likes']}・コメント {x['comments']}・購入 {x['purchases']}")
+    if len(r["rows"]) > 20:
+        print(f"  …ほか {len(r['rows']) - 20} 件")
+    for n, m in r["errors"]:
+        print(f"  ⚠ {n}行目: {m}")
+    if not r["rows"]:
+        sys.exit("取り込める行がありません。")
+    if not _ask_yes(f"{len(r['rows'])} 件を記録しますか？ 記録するなら yes と入力: ", tty_only=not sys.stdin.isatty()):
+        print("記録しませんでした。")
+        sys.exit(1)
+    added, skipped = RC.import_rows(r["rows"])
+    print(f"{added} 件を記録しました" + (f"（同じ記録 {skipped} 件は飛ばしました）" if skipped else "") + "。")
+
+
+def cmd_kakera_suggest(args) -> None:
+    from . import kakera_suggest as KS
+    k = _kakera().get_kakera(args.id)
+    sug = KS.suggest(k["body"], k["viewpoints"])
+    if not sug:
+        print("観点の候補はありません。")
+    for s in sug:
+        print(f"{s['viewpoint']}（{'・'.join(s['words'])}）")
+    if args.add:
+        for vp in args.add:
+            KS.add_viewpoint(k["id"], vp)
+        print(f"観点を足しました: {'、'.join(args.add)}")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -690,6 +1257,8 @@ def build_parser() -> argparse.ArgumentParser:
     a = k.add_parser("show", help="1件表示")
     a.add_argument("id")
     a.set_defaults(func=cmd_kakera_show)
+    a = k.add_parser("suggest", help="観点タグの候補を表示（--add で選んだ観点を足す）")
+    a.add_argument("id"); a.add_argument("--add", nargs="*", default=[]); a.set_defaults(func=cmd_kakera_suggest)
     a = k.add_parser("rm", help="削除（生成来歴に参照があれば --force が必要）")
     a.add_argument("id")
     a.add_argument("--force", action="store_true")
@@ -788,6 +1357,117 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--memo", default="")
     a.set_defaults(func=cmd_reaction_add)
     rx.add_parser("list", help="記事ごとの一覧").set_defaults(func=cmd_reaction_list)
+    a = rx.add_parser("import", help="CSV から取り込む（読み取った内容を表示し、yes で記録）")
+    a.add_argument("file"); a.add_argument("--recorded", default="", help="記録日（省略で今日）")
+    a.set_defaults(func=cmd_reaction_import)
+    d = sub.add_parser("draft", help="体験談の下書き（作成・改稿・版）").add_subparsers(dest="sub", required=True)
+    d.add_parser("list", help="下書きのある記事と最新の版").set_defaults(func=cmd_draft_list)
+    a = d.add_parser("generate", help="区間の下書きを作る（かけらだけ・ツールなし。yes で実行）")
+    a.add_argument("article"); a.add_argument("section")
+    a.add_argument("--show-prompt", action="store_true", help="Claude に渡す全文を表示する")
+    a.set_defaults(func=cmd_draft_generate)
+    a = d.add_parser("show", help="下書きを段落番号・根拠・印つきで表示")
+    a.add_argument("article"); a.add_argument("--version", type=int, default=0)
+    a.set_defaults(func=cmd_draft_show)
+    a = d.add_parser("versions", help="版の一覧"); a.add_argument("article"); a.set_defaults(func=cmd_draft_versions)
+    a = d.add_parser("diff", help="2つの版の差分（段落単位）")
+    a.add_argument("article"); a.add_argument("a", type=int); a.add_argument("b", type=int)
+    a.set_defaults(func=cmd_draft_diff)
+    a = d.add_parser("restore", help="前の版に戻す（新しい版として保存）")
+    a.add_argument("article"); a.add_argument("version", type=int); a.set_defaults(func=cmd_draft_restore)
+    a = d.add_parser("save", help="下書きファイルの手直しを新しい版として保存する")
+    a.add_argument("article"); a.add_argument("--note", default="")
+    a.add_argument("--stdin", action="store_true", help="ファイルではなく標準入力の本文を保存する")
+    a.set_defaults(func=cmd_draft_save)
+    a = d.add_parser("revise", help="段落の書き直しを提案させる（採用するまで本文は変わらない）")
+    a.add_argument("article"); a.add_argument("block", type=int); a.add_argument("instruction")
+    a.add_argument("--show-prompt", action="store_true"); a.set_defaults(func=cmd_draft_revise)
+    a = d.add_parser("accept", help="改稿の提案（または保留中の作成結果）を本文に入れる")
+    a.add_argument("job"); a.set_defaults(func=cmd_draft_accept)
+    a = d.add_parser("discard", help="改稿の提案を見送る"); a.add_argument("job"); a.set_defaults(func=cmd_draft_discard)
+
+    kb = sub.add_parser("kabeuchi", help="壁打ちセッション（ツールなし・Remote Control）").add_subparsers(dest="sub", required=True)
+    a = kb.add_parser("start", help="確認実行（ツール0・MCPなし）のあと起動する。既定はこの端末で起動")
+    a.add_argument("article"); a.add_argument("--tmux", action="store_true", help="tmux で裏に常駐させる")
+    a.set_defaults(func=cmd_kabeuchi_start)
+    kb.add_parser("status", help="記事ごとの状態").set_defaults(func=cmd_kabeuchi_status)
+    a = kb.add_parser("stop", help="tmux で常駐中のセッションを止める"); a.add_argument("article")
+    a.set_defaults(func=cmd_kabeuchi_stop)
+
+    a = sub.add_parser("rdraft", help="リサーチ資料だけから比較表と下書きを作る（yes で実行）")
+    a.add_argument("article"); a.add_argument("--materials", default="", help="使う資料ID（カンマ区切り。省略で記事の資料すべて）")
+    a.add_argument("--show-prompt", action="store_true"); a.set_defaults(func=cmd_rdraft)
+
+    a = sub.add_parser("interview", help="インタビュー（1問ずつ答えると、かけらとして保存）")
+    a.add_argument("article"); a.set_defaults(func=cmd_interview)
+
+    a = sub.add_parser("price", help="値付けの目安（文字数と情報密度から。最終決定は人）")
+    a.add_argument("target", help="記事名 または 下書き.md"); a.set_defaults(func=cmd_price)
+    a = sub.add_parser("crosssell", help="記事末尾の案内文（公開済みの記事から近いもの）を表示する")
+    a.add_argument("target"); a.set_defaults(func=cmd_crosssell)
+    sub.add_parser("pace", help="執筆ペース（週ごとのかけら・ネタ・公開の数）").set_defaults(func=cmd_pace)
+    pd = sub.add_parser("published", help="公開した記事の登録（クロスセル・値付けの参考）").add_subparsers(dest="sub", required=True)
+    a = pd.add_parser("add", help="登録する")
+    a.add_argument("title"); a.add_argument("--url", default=""); a.add_argument("--price", default="0")
+    a.add_argument("--tags", default=""); a.add_argument("--published", default=""); a.add_argument("--summary", default="")
+    a.add_argument("--article", default=""); a.set_defaults(func=cmd_published_add)
+    pd.add_parser("list", help="一覧").set_defaults(func=cmd_published_list)
+    a = pd.add_parser("rm", help="登録を削除"); a.add_argument("id"); a.set_defaults(func=cmd_published_rm)
+
+    sn = sub.add_parser("sns", help="SNS 導線（投稿はしない。投稿画面の URL を出すだけ）").add_subparsers(dest="sub", required=True)
+    a = sn.add_parser("list", help="投稿の下書きと直接宣伝の割合"); a.add_argument("--all", action="store_true")
+    a.set_defaults(func=cmd_sns_list)
+    a = sn.add_parser("draft", help="無料エリアから X・Threads の投稿文を作らせる（yes で実行）")
+    a.add_argument("article"); a.add_argument("type"); a.add_argument("--show-prompt", action="store_true")
+    a.set_defaults(func=cmd_sns_draft)
+    a = sn.add_parser("new", help="自分で書いた投稿文を下書きとして保存")
+    a.add_argument("platform"); a.add_argument("type"); a.add_argument("text", nargs="?", default="")
+    a.set_defaults(func=cmd_sns_new)
+    a = sn.add_parser("open", help="Web Intent の URL を表示（開いて送信は自分で）"); a.add_argument("id")
+    a.set_defaults(func=cmd_sns_open)
+    a = sn.add_parser("posted", help="投稿したことを記録"); a.add_argument("id"); a.add_argument("--date", default="")
+    a.set_defaults(func=cmd_sns_posted)
+    a = sn.add_parser("health", help="月1の健康診断を記録")
+    a.add_argument("month", help="YYYY-MM"); a.add_argument("platform")
+    a.add_argument("--bookmarks", default=""); a.add_argument("--profile-clicks", dest="profile_clicks", default="")
+    a.add_argument("--impressions", default=""); a.set_defaults(func=cmd_sns_health)
+
+    a = sub.add_parser("thumb", help="サムネイル（1280×670）を作る。PNG は playwright か Chromium があれば")
+    a.add_argument("article"); a.add_argument("--title", default=""); a.add_argument("--keyword", default="")
+    a.add_argument("--templates", default="", help="ひな形の名前（カンマ区切り。省略ですべて）")
+    a.add_argument("--no-png", action="store_true"); a.set_defaults(func=cmd_thumb)
+
+    bk = sub.add_parser("book", help="参考書籍（PDF から文体ルールの候補）").add_subparsers(dest="sub", required=True)
+    a = bk.add_parser("add", help="PDF か .txt を取り込む（文字はアプリが取り出す）")
+    a.add_argument("file"); a.add_argument("--title", default=""); a.set_defaults(func=cmd_book_add)
+    bk.add_parser("list", help="一覧").set_defaults(func=cmd_book_list)
+    a = bk.add_parser("find", help="キーワードが出てくるページ"); a.add_argument("id"); a.add_argument("words", nargs="+")
+    a.set_defaults(func=cmd_book_find)
+    a = bk.add_parser("analyze", help="ページを選んで文体ルールの候補を出させる（yes で実行）")
+    a.add_argument("id"); a.add_argument("start", type=int); a.add_argument("end", type=int)
+    a.add_argument("--focus", default=""); a.add_argument("--show-prompt", action="store_true")
+    a.set_defaults(func=cmd_book_analyze)
+
+    pb = sub.add_parser("publish", help="公開準備（境界チェック・プレビュー）").add_subparsers(dest="sub", required=True)
+    a = pb.add_parser("check", help="無料/有料の境界チェック（警告のみ。警告があれば終了コード1）")
+    a.add_argument("target", help="記事名 または 下書き.md"); a.set_defaults(func=cmd_publish_check)
+    a = pb.add_parser("preview", help="note スマホプレビューの HTML を書き出す（既定は作業フォルダの exports/）")
+    a.add_argument("target"); a.add_argument("--price", default=""); a.add_argument("--out", default="")
+    a.set_defaults(func=cmd_publish_preview)
+
+    st = sub.add_parser("style", help="文体ルール集").add_subparsers(dest="sub", required=True)
+    st.add_parser("show", help="表示").set_defaults(func=cmd_style_show)
+    st.add_parser("edit", help="書く（$EDITOR か標準入力）").set_defaults(func=cmd_style_edit)
+    a = st.add_parser("edits", help="AI の段落と人の手直しの記録（文体学習の材料）")
+    a.add_argument("--limit", type=int, default=20); a.set_defaults(func=cmd_style_edits)
+    a = st.add_parser("suggest", help="手直しの記録から文体ルールの候補を出させる（yes で実行。自動反映しない）")
+    a.add_argument("--show-prompt", action="store_true"); a.set_defaults(func=cmd_style_suggest)
+    a = st.add_parser("candidates", help="文体ルールの候補の一覧")
+    a.add_argument("--all", action="store_true", help="採用・却下済みも表示"); a.set_defaults(func=cmd_style_candidates)
+    a = st.add_parser("adopt", help="候補を採用して文体ルール集に追記する")
+    a.add_argument("cid"); a.add_argument("--text", default=None, help="直した文で採用する")
+    a.set_defaults(func=cmd_style_adopt)
+    a = st.add_parser("reject", help="候補を却下する"); a.add_argument("cid"); a.set_defaults(func=cmd_style_reject)
     return p
 
 
@@ -808,7 +1488,7 @@ def main(argv=None) -> None:
         print("\n中止しました。", file=sys.stderr)
         sys.exit(130)
     except Exception as ex:  # リサーチは外部とやり取りするので、トレースバックではなく伏せ字済みの理由だけ出す
-        if getattr(args, "cmd", "") not in ("research", "ideas"):
+        if getattr(args, "cmd", "") not in ("research", "ideas", "draft", "style", "kabeuchi", "book", "sns", "rdraft"):
             raise
         print(_safe(f"エラー（{type(ex).__name__}）: {ex}"), file=sys.stderr)
         sys.exit(1)

@@ -46,6 +46,31 @@ notestudioの段階3〜6（執筆・レビュー・公開準備・分析）は�
 - nw の変更は `./ns sync` ではなく、プルリクエストのマージで取り込む（sync は inbox/*.json しか受け取らない）。
 - かけら・下書きなどの実データは、作業フォルダ（既定 `workspace/`、本番は gocryptfs の復号ビュー）以外に置かない。commit もしない。
 
+### notewriter 開発の引き継ぎメモ（2026-10-01 更新・ブランチ nw-drafting）
+
+**できているもの**: SPEC.md の機能1〜14をひととおり（第1〜第4段階）。
+- 画面は機能ごとに `notewriter/web_*.py` に分け、`web.py` の `EXTENSIONS` から振り分けるだけ（各モジュールは
+  `PREFIXES`・`route_get`・`post`・`back`）。公開準備の画面に足すカードは `web_publish.CARD_MODULES`。
+- ツールなしの Claude を裏で1回呼ぶ処理は `notewriter/jobs.py`（確認トークン・同時実行の排他・init 検証）を使う。
+  文体候補 `style_learn.py`・参考書籍 `books.py`・リサーチ型の下書き `research_writing.py`・SNS 投稿文 `sns.py`。
+- 壁打ちは `kabeuchi.py`（`claude_runner.safety_flags` を確認実行と起動で共通に使う）。
+- VPS 用の手順書とスクリプトは `notewriter/ops/`（**未検証**。bash -n のみ）。
+
+**まだ確かめていないこと（Mac・VPS で人が確認する）**:
+- 本物の Claude での確認: 壁打ちの起動（`claude --remote-control` のフラグ名・`--append-system-prompt-file`）、
+  文体候補・書籍分析・リサーチ型の下書き・SNS 投稿文の出力の質。クラウドの claude はログインしていない。
+- X・Threads の Web Intent の実機確認（済んだら `config/sns.json` の `intents_verified` を true に）。
+- note の CSV の列名（`config/reactions_csv.json`）。Mac での `tools/pdftool` による書籍の取り込み。
+- `notewriter/ops/` のスクリプトの実行。
+
+**クラウドでの注意**:
+- Mac の Python は **3.9.6**。クラウドの Python は新しいので、3.10 以降の書き方（`match`、実行時の `X | Y` 型、
+  かっこ付きの複数 with、f文字列の式の中で外側と同じ引用符を使う・バックスラッシュを使う）を使わない。
+  可能なら `uv python install 3.9` 等で 3.9 でもテストする。
+- クラウドの claude CLI はログインしていないので、Claude を呼ぶ部分は偽の claude（`tests/test_writing.py` の `FAKE`）で
+  テストする。本物での確認は、マージ後に Mac で行う（ダミーのかけらのみ。実データは SPEC.md 絶対5が済むまで使わない）。
+- 作業はブランチで行い、`python3 -m unittest discover tests` がすべて通ってから push する。マージは人が PR で行う。
+
 ## 参考書籍（references/books/）
 
 ユーザーが記事執筆の参考にしてほしい書籍を置く場所。`_書籍リスト.md` に「使う段階」と用途が書かれている。

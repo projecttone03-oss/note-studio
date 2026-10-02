@@ -1,0 +1,59 @@
+{
+  "_説明": [
+    "体験談の下書き作成（本文確定処理）の設定。作業フォルダの config/writing.json があれば、キー単位で上書きする。",
+    "Claude Code（サブスク認証）をツールなし・MCPなしで起動し、指示とかけらは標準入力で渡す（SPEC.md 絶対4）。",
+    "材料は、その区間に割り当てたかけらだけ。ネタ帳・リサーチ資料・ほかの区間のかけらは渡さない。"
+  ],
+  "command": "claude",
+  "model": "",
+  "max_turns": 2,
+  "timeout_sec": 600,
+  "kakera_max_chars": 30000,
+  "style_max_chars": 6000,
+  "limit_patterns": [
+    "(?i)usage limit",
+    "(?i)rate limit",
+    "(?i)\\blimit (?:reached|exceeded)",
+    "(?i)reached your .*limit",
+    "(?i)out of (?:extra )?usage",
+    "(?i)resets? (?:at|in)",
+    "上限"
+  ],
+  "disallowed_tools": [
+    "WebSearch",
+    "WebFetch",
+    "Bash",
+    "BashOutput",
+    "KillShell",
+    "Edit",
+    "MultiEdit",
+    "Write",
+    "Read",
+    "Glob",
+    "Grep",
+    "LS",
+    "NotebookEdit",
+    "NotebookRead",
+    "Task",
+    "Agent",
+    "Skill",
+    "SlashCommand",
+    "TodoWrite",
+    "ExitPlanMode",
+    "EnterPlanMode",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Monitor",
+    "mcp__*"
+  ],
+  "style_candidates": {
+    "_説明": "文体ルール候補（./nw style suggest・/style/candidates）。copy_max_chars 字以上、材料の文がそのまま続く候補は直すまで採用できない。 参考書籍の分析は book_max_chars 字までのページを渡す。",
+    "edits_max": 40,
+    "edits_max_chars": 20000,
+    "max_candidates": 8,
+    "copy_max_chars": 20,
+    "book_max_chars": 20000,
+    "book_max_candidates": 8
+  },
+  "research_max_chars": 60000
+}

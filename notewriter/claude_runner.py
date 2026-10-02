@@ -75,18 +75,22 @@ def _fmt_reset(v) -> str:
         return ""
 
 
-def build_command(allowed_tools: Sequence[str], *, max_turns: int, model: str = "", command: str = "claude",
-                  disallowed_tools: Sequence[str] = ()) -> List[str]:
-    """実行するコマンドライン（プロンプトは含まない）。"""
+def base_command(command: str = "claude") -> List[str]:
+    """claude 本体の起動部分（環境変数 NW_CLAUDE_CMD があればそちら。テストの偽 claude 用）。"""
     override = os.environ.get("NW_CLAUDE_CMD")
-    base = shlex.split(override) if override else shlex.split(command or "claude")
+    return shlex.split(override) if override else shlex.split(command or "claude")
+
+
+def safety_flags(allowed_tools: Sequence[str], disallowed_tools: Sequence[str] = ()) -> List[str]:
+    """ツール制限のフラグ（単発の -p 実行と、壁打ちの対話セッションで同じものを使う）。
+
+    --tools / --allowedTools / --disallowedTools、権限モード dontAsk、MCP なし（--strict-mcp-config）、
+    利用者の設定・フックを読まない（--setting-sources ""）、PreToolUse フック（tool_guard.py）。
+    """
     allowed = [t for t in allowed_tools if t]
     hook_cmd = shlex.quote(sys.executable) + " " + shlex.quote(str(HOOK_SCRIPT))
     settings = {"hooks": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": hook_cmd}]}]}}
-    cmd = list(base) + [
-        "-p", "--output-format", "stream-json", "--verbose",
-        "--tools", ",".join(allowed),
-    ]
+    cmd = ["--tools", ",".join(allowed)]
     if allowed:
         cmd += ["--allowedTools", ",".join(allowed)]
     deny = [t for t in disallowed_tools if t and t not in allowed]
@@ -97,9 +101,17 @@ def build_command(allowed_tools: Sequence[str], *, max_turns: int, model: str = 
         "--strict-mcp-config",
         "--setting-sources", "",
         "--settings", json.dumps(settings, ensure_ascii=False),
-        "--no-session-persistence",
-        "--max-turns", str(int(max_turns)),
     ]
+    return cmd
+
+
+def build_command(allowed_tools: Sequence[str], *, max_turns: int, model: str = "", command: str = "claude",
+                  disallowed_tools: Sequence[str] = (), extra_args: Sequence[str] = ()) -> List[str]:
+    """実行するコマンドライン（プロンプトは含まない）。"""
+    cmd = base_command(command) + ["-p", "--output-format", "stream-json", "--verbose"]
+    cmd += safety_flags(allowed_tools, disallowed_tools)
+    cmd += ["--no-session-persistence", "--max-turns", str(int(max_turns))]
+    cmd += list(extra_args)
     if model:
         cmd += ["--model", model]
     return cmd
@@ -138,10 +150,10 @@ def _matches(patterns: Sequence[str], text: str) -> bool:
 
 def run_claude(prompt: str, allowed_tools: Sequence[str], *, max_turns: int, timeout_sec: int, cwd: Path,
                model: str = "", command: str = "claude", disallowed_tools: Sequence[str] = (),
-               limit_patterns: Sequence[str] = ()) -> ClaudeResult:
+               limit_patterns: Sequence[str] = (), extra_args: Sequence[str] = ()) -> ClaudeResult:
     allowed = [t for t in allowed_tools if t]
     cmd = build_command(allowed, max_turns=max_turns, model=model, command=command,
-                        disallowed_tools=disallowed_tools)
+                        disallowed_tools=disallowed_tools, extra_args=extra_args)
     env = {k: v for k, v in os.environ.items() if k not in _SCRUB_ENV}
     env["NW_ALLOWED_TOOLS"] = ",".join(allowed)
     cwd = Path(cwd)

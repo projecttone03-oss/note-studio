@@ -1,0 +1,15 @@
+{
+  "_説明": [
+    "壁打ちセッション（./nw kabeuchi・/kabeuchi）の設定。作業フォルダの config/kabeuchi.json があれば、キー単位で上書きする。",
+    "対話セッション方式 claude --remote-control <名前> で起動する。サーバーモード claude remote-control と --bare は使わない（SPEC.md 絶対4）。",
+    "ツール制限のフラグ・モデル・拒否するツールの一覧は config/writing.json と同じものを使う。起動前に同じフラグで -p の確認実行をする。",
+    "remote_control_args の {name} は「name_prefix + 記事名」に置き換わる。Claude Code の版でフラグが変わったらここを直す。"
+  ],
+  "remote_control_args": ["--remote-control", "{name}"],
+  "name_prefix": "nw-",
+  "tmux": "tmux",
+  "preflight_prompt": "起動前の確認です。「OK」とだけ返してください。",
+  "preflight_timeout_sec": 180,
+  "material_max_chars": 60000,
+  "include_draft": true
+}

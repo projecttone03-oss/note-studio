@@ -1,0 +1,9 @@
+{
+  "_説明": "執筆ペースの表示（ダッシュボード・/pace・./nw pace）の言葉。責めない言い方にする。{kakera} {neta} {published} は今週の数、{kakera_total} {neta_total} {published_total} はこれまでの数。",
+  "weeks": 8,
+  "messages": {
+    "active": "今週は {kakera} 個のかけらを書きました。書いた分だけ、記事の材料が増えています。",
+    "quiet": "今週はお休み中です。書きたくなったら、ネタ帳に一言だけでも十分です。",
+    "total": "これまでに かけら {kakera_total} 個・ネタ {neta_total} 個・公開 {published_total} 本。"
+  }
+}

@@ -346,3 +346,22 @@ class CliTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LayoutTest(unittest.TestCase):
+    """画面の枠（メニューのまとまり・スマホの下のタブ・メニュー画面）。"""
+
+    def test_grouped_nav_and_tabbar(self):
+        from notewriter import web
+        html = web.layout("t", "<p>本文</p>", active="drafts")
+        for g in ("集める", "調べる", "書く", "届ける"):
+            self.assertIn(g, html)
+        self.assertIn('class="tabbar"', html)
+        self.assertIn('href="/menu"', html)
+        self.assertIn('<a href="/drafts" class="on">', html)
+        keys = [k for k, _, _ in web.NAV]
+        self.assertEqual(len(keys), len(set(keys)), "メニューに同じ画面が2回出ない")
+        menu = web.page_menu()
+        for k, h, l in web.NAV:
+            self.assertIn(f'href="{h}"', menu)
+        self.assertNotIn('class="tabbar"', web.layout("t", "x", nav=False))
