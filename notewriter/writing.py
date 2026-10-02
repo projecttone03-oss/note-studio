@@ -43,7 +43,8 @@ DEFAULT_CONFIG = {
 }
 EXCLUDED_STATUS = "保留"  # 下書きの材料に使わないかけらの使用状況
 SOURCES = {"skeleton": "骨組み", "ai_generate": "AIが区間を作成", "ai_revise": "AIが段落を修正",
-           "human_edit": "人の手直し", "restore": "前の版に戻した", "ai_research": "AIが資料から作成"}
+           "human_edit": "人の手直し", "restore": "前の版に戻した", "ai_research": "AIが資料から作成",
+           "ai_story": "AIがかけらから記事を作成"}
 STYLE_HEADER = ("# 文体ルール集\n\n"
                 "<!-- 下書きを作るたびに、この内容を「書き方の参考」として Claude に渡します。事実の材料にはしません。\n"
                 "     1行1ルールで、自由に書き足し・削除してください。 -->\n")
@@ -286,10 +287,37 @@ def _align(old: List[dict], new: List[dict]) -> Tuple[List[dict], List[Tuple[str
                 out.append(_block(nb["text"], nb["kind"], ob.get("kakera", ()), "human"))
                 if ob.get("materials"):  # リサーチ型の段落は根拠の資料IDも引き継ぐ
                     out[-1]["materials"] = list(ob["materials"])
-                if ob.get("origin") == "ai" and nb["kind"] == "para":
+                if ob.get("sentences") and nb["kind"] == "para":
+                    # 1文ずつの根拠を持つ段落: 変わらない文は根拠・「足した文」の印を引き継ぎ、直した文だけ人の文にする
+                    sents, spairs = _align_sentences(ob["sentences"], nb["text"])
+                    out[-1]["sentences"] = sents
+                    out[-1]["origin"] = "ai" if all(x.get("origin") == "ai" for x in sents) else "human"
+                    out[-1]["flags"] = [f for x in sents for f in x.get("flags") or []]
+                    sec = section_of(old, i1 + k)
+                    pairs.extend((sec, a, h) for a, h in spairs)
+                elif ob.get("origin") == "ai" and nb["kind"] == "para":
                     pairs.append((section_of(old, i1 + k), ob["text"], nb["text"]))
             else:
                 out.append(_block(nb["text"], nb["kind"], (), "human"))
+    return out, pairs
+
+
+def _align_sentences(old_sents: List[dict], new_text: str) -> Tuple[List[dict], List[Tuple[str, str]]]:
+    """段落の中を文ごとに突き合わせる。返り値は（新しい文の一覧, 文体学習の組（AIの文, 人の文））。"""
+    from .story import split_sentences
+    new = split_sentences(new_text)
+    sm = difflib.SequenceMatcher(a=[x["text"] for x in old_sents], b=new, autojunk=False)
+    out: List[dict] = []
+    pairs: List[Tuple[str, str]] = []
+    for op, i1, i2, j1, j2 in sm.get_opcodes():
+        if op == "equal":
+            out.extend(dict(x) for x in old_sents[i1:i2])
+            continue
+        for t in new[j1:j2]:
+            out.append({"text": t, "kakera": [], "bridge": False, "origin": "human", "flags": []})
+        old_ai = [x["text"] for x in old_sents[i1:i2] if x.get("origin") == "ai" and not x.get("gap")]
+        if op == "replace" and old_ai:
+            pairs.append(("".join(old_ai), "".join(new[j1:j2])))
     return out, pairs
 
 

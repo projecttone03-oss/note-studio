@@ -227,6 +227,27 @@ pre.send{white-space:pre-wrap;word-break:break-word;background:#fbfdfe;border:2p
 form.inline{display:inline}
 .thumb{margin:0 0 16px}.thumb img{width:100%;height:auto;border-radius:12px;border:1px solid var(--line);display:block;background:#fff}
 .chk.sug{border-style:dashed;border-color:var(--sun);background:var(--sun-weak)}
+.boxpick{margin:0 0 12px}.boxpick select{font-weight:800}
+.card.post{padding:14px}textarea.tsubuyaki{font-size:18px;min-height:150px;line-height:1.7}
+.btn.wide{width:100%}
+.tweet{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}.tweet:last-of-type{border-bottom:0}
+.tsel{flex:none;padding-top:4px}.tsel input{width:22px;height:22px}.tbody{flex:1;min-width:0}.ttext{font-size:16px}
+article.story .atitle::before{content:none}
+.movebar.off{display:none}
+.movebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--sun-weak);border-radius:14px;padding:8px 12px;margin-top:10px}
+.movebar select{width:auto;min-height:40px;flex:1}
+article.story{font-size:17px;line-height:2;padding:20px 22px}
+article.story .atitle{all:unset;display:block;font-size:22px;font-weight:800;line-height:1.5;margin:4px 0 18px}
+article.story .ahead{font-size:19px;color:var(--ink);margin:30px 0 10px;border-left:5px solid var(--main);padding-left:10px}
+details.para{margin:0 0 1.1em}details.para>summary{list-style:none;cursor:pointer;color:var(--ink);font-weight:400;padding:2px 4px;border-radius:8px}
+details.para>summary::before{content:none}details.para>summary:hover{background:#f6fafc}
+details.para[open]>summary{background:var(--sun-weak)}
+.bridge{text-decoration:underline;text-decoration-color:#e58b2b;text-decoration-thickness:2px;text-underline-offset:4px;background:#fff4e3}
+.chkw{text-decoration:underline dotted #c63a32;text-underline-offset:4px}
+.gapmark{display:inline-block;font-weight:800;color:#fff;background:var(--warm);border-radius:8px;padding:0 6px;margin:0 2px}
+.legend{background:#fff;border-radius:12px;padding:8px 12px;margin:0 0 12px;box-shadow:var(--shadow)}
+details.q{border-bottom:1px solid var(--line);padding:4px 0}details.q>summary{font-weight:700;color:var(--ink)}
+details.q.done>summary{color:var(--sub)}
 .pick-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);min-height:56px}
 .pick-row:hover{border-color:var(--main);text-decoration:none}
 .question{font-size:19px;font-weight:800;line-height:1.7;margin:8px 0 14px}
@@ -268,6 +289,10 @@ main{padding-bottom:100px!important}}
 """
 
 JS = """
+(function(){var bar=document.getElementById('moveform');if(!bar)return;var f=function(){var n=document.querySelectorAll('input[form=moveform]:checked').length;
+bar.classList.toggle('off',n===0);var c=bar.querySelector('[data-count]');if(c)c.textContent=n};document.querySelectorAll('input[form=moveform]').forEach(function(i){i.addEventListener('change',f)});f();})();
+document.querySelectorAll('select[data-autosubmit]').forEach(function(s){s.addEventListener('change',function(){s.form.submit()})});
+document.querySelectorAll('textarea[data-ctrl-enter]').forEach(function(t){t.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&(ev.ctrlKey||ev.metaKey)&&t.form){ev.preventDefault();t.form.requestSubmit?t.form.requestSubmit():t.form.submit()}})});
 document.querySelectorAll('[data-sug]').forEach(function(box){var kw={};try{kw=JSON.parse(box.dataset.sug)}catch(x){}
 var ta=document.getElementById('k-body'),hint=document.querySelector('[data-sughint]');if(!ta)return;
 var f=function(){var t=ta.value,names=[];box.querySelectorAll('label.chk').forEach(function(l){var i=l.querySelector('input'),ws=kw[i.value]||[],hit=false;
@@ -284,10 +309,11 @@ i.addEventListener('change',function(){var n=[];for(var k=0;k<i.files.length;k++
 
 # メニュー: 作業の流れ（集める → 調べる → 書く → 届ける）ごとにまとめる。(キー, URL, 名前, ひとこと)
 NAV_GROUPS = (
-    ("集める", (("neta", "/neta", "ネタ帳", "思いついたことを1行メモ"), ("interview", "/interview", "インタビュー", "質問に答えるだけで、かけらになる"),
+    ("集める", (("tsubuyaki", "/tsubuyaki", "つぶやく", "思い出をひとことずつ、かけらにする"),
+              ("neta", "/neta", "ネタ帳", "思いついたことを1行メモ"), ("interview", "/interview", "インタビュー", "質問に答えるだけで、かけらになる"),
               ("kakera", "/kakera", "かけら", "記事の材料（体験したこと）"), ("articles", "/articles", "記事と充足度", "記事・区間と、足りない観点"))),
     ("調べる", (("ideas", "/ideas", "ネタ出し", "書けそうなテーマの候補"), ("research", "/research", "リサーチ", "調べて資料にする"))),
-    ("書く", (("drafts", "/drafts", "下書き", "かけら・資料から下書きと版"), ("kabeuchi", "/kabeuchi", "壁打ち", "スマホで相談（本文は確定しない）"),
+    ("書く", (("story", "/story", "下書き", "ボックスのかけらから記事を1本"), ("kabeuchi", "/kabeuchi", "壁打ち", "スマホで相談（本文は確定しない）"),
              ("check", "/check", "チェッカー", "公開前の言い回し・個人情報の確認"))),
     ("届ける", (("publish", "/publish", "公開準備", "境界チェック・プレビュー・値付け"), ("sns", "/sns", "SNS", "X・Threads の投稿文"),
               ("reactions", "/reactions", "反応記録", "スキ・購入の数"))),
@@ -295,8 +321,8 @@ NAV_GROUPS = (
 )
 NAV = (("home", "/", "ダッシュボード"),) + tuple((k, h, l) for _, items in NAV_GROUPS for k, h, l, _ in items)
 # スマホの下のタブ（よく使うものだけ。ほかは「メニュー」から）
-TABS = (("home", "/", "⌂", "ホーム"), ("kakera", "/kakera/new", "＋", "書く"), ("interview", "/interview", "？", "答える"),
-        ("drafts", "/drafts", "≡", "下書き"), ("menu", "/menu", "☰", "メニュー"))
+TABS = (("home", "/", "⌂", "ホーム"), ("tsubuyaki", "/tsubuyaki", "＋", "つぶやく"), ("interview", "/interview", "？", "答える"),
+        ("story", "/story", "≡", "下書き"), ("menu", "/menu", "☰", "メニュー"))
 
 
 def page_menu(active: str = "") -> str:
@@ -311,6 +337,7 @@ def layout(title: str, body: str, active: str = "", flash: str = "", error: bool
            head: str = "") -> str:
     links = ""
     tabs = ""
+    active = {"drafts": "story", "kakera_new": "tsubuyaki"}.get(active, active)  # 以前の画面は新しいメニューの場所を光らせる
     if nav:
         links = (f'<div class="grp"><a href="/" class="{"on" if active == "home" else ""}">ダッシュボード</a></div>'
                  + "".join(f'<div class="grp"><span class="gl">{e(g)}</span>'
@@ -413,7 +440,7 @@ def article_datalists(articles: List[dict]) -> Tuple[str, str]:
 
 def place_fields(prefix: str, article: str, section: str, secmap: str) -> str:
     sec_id = f"{prefix}-section"
-    return f"""<div class="cols"><div><label class="f" for="{prefix}-article">記事</label>
+    return f"""<div class="cols"><div><label class="f" for="{prefix}-article">ボックス（記事）</label>
 <input type="text" id="{prefix}-article" name="article" value="{e(article)}" list="dl-articles" data-secmap="{e(secmap)}" data-sec="{sec_id}" placeholder="例: 前編" autocomplete="off"></div>
 <div><label class="f" for="{sec_id}">区間</label>
 <input type="text" id="{sec_id}" name="section" value="{e(section)}" list="dl-sec-all" placeholder="例: 逮捕の朝" autocomplete="off"></div></div>"""
@@ -730,10 +757,10 @@ def page_home() -> str:
     if no_art:
         art_html += f'<p class="small muted">記事が未設定のかけら: {no_art} 件</p>'
     return f"""<h1>ダッシュボード</h1>
-<div class="quick"><a class="main" href="/kakera/new">＋ かけらを書く<span>体験したことを書きとめる</span></a>
+<div class="quick"><a class="main" href="/tsubuyaki">＋ つぶやく<span>思い出をひとことずつ</span></a>
 <a href="/interview">インタビューに答える<span>質問に答えるだけ</span></a>
 <a href="#neta">ネタを1行メモ<span>思いついたことをすぐ</span></a>
-<a href="/drafts">下書きを見る<span>作成・直し・版</span></a></div>
+<a href="/story">下書きを見る<span>ボックスから記事を1本</span></a></div>
 {next_steps_card(st)}
 <div class="kpi">{kpi}</div>
 <div class="grid"><div>
@@ -1479,7 +1506,7 @@ Max 契約の利用上限に達したら、そこで止まって「Perplexity �
 
 # 機能ごとの画面（web_*.py）。各モジュールは PREFIXES・route_get(path, qs)・post(h, path, form)・back(path) を持つ。
 # web.py は振り分けだけを行い、画面の中身は各ファイルに置く（web.py を肥大化させない）。
-EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth", "web_sns", "web_thumb", "web_books", "web_reactions_csv", "web_suggest")
+EXTENSIONS = ("web_style", "web_writing", "web_kabeuchi", "web_publish", "web_rdraft", "web_interview", "web_growth", "web_sns", "web_thumb", "web_books", "web_reactions_csv", "web_suggest", "web_story")
 
 
 def home_extra_cards() -> str:

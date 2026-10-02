@@ -70,8 +70,12 @@ def checklist_card(name: str, text: str) -> str:
         b = f'<span class="badge b-warn">警告 {n["warn"]}</span>'
     else:
         b = '<span class="badge b-ok">OK</span>'
+    from . import story
+    n_bridge = len(story.bridge_sentences(name))
+    bridge_badge = (f'<span class="badge b-warn">{n_bridge}文</span>' if n_bridge else '<span class="badge b-ok">0文</span>')
     rows = [
-        (b, '<a href="#boundary">無料/有料の境界と [要追加] の残り</a>'),
+        (b, '<a href="#boundary">無料/有料の境界と [要追加]・【足りない】の残り</a>'),
+        (bridge_badge, f'<a href="/story/b/{e(quote(name, safe=""))}/bridge">Claude が足した文（自分が言っていないことになっていないか）</a>'),
         ('<span class="badge b-st">人が確認</span>', '<a href="#compliance">コンプライアンスチェック（編集後の全文）</a>'),
         ('<span class="badge b-st">見る</span>', '<a href="#preview">スマホでの見え方（プレビュー）</a>'),
         ('<span class="badge b-st">決める</span>', '<a href="#price">価格（目安を見て自分で決める）</a>'),

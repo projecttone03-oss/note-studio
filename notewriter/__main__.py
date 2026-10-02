@@ -22,6 +22,8 @@
   ./nw draft accept|discard JOB                        改稿の提案を採用／見送り
   ./nw style show|edit|edits                           文体ルール集（edit は $EDITOR か標準入力）と、手直しの記録
   ./nw kabeuchi start 記事 [--tmux]|status|stop 記事   壁打ち（確認実行でツール0を確かめてから claude --remote-control で起動）
+  ./nw tsubuyaki "ひとこと" [--box B]   ./nw box list|new|move   ./nw story generate|show|answer ボックス
+                                              つぶやき・ボックス・ボックスから記事を1本（足した文・足りない質問つき）
   ./nw interview 記事                                 1問ずつ答えると、かけらとして保存（空いている観点と [要追加] から質問）
   ./nw rdraft 記事 [--materials M0001,M0002]          リサーチ資料だけから比較表と下書き（資料IDつき・鮮度切れ警告）
   ./nw price 記事|下書き.md   ./nw crosssell 記事   ./nw pace   ./nw published add|list|rm
@@ -1191,6 +1193,86 @@ def cmd_kakera_suggest(args) -> None:
         print(f"観点を足しました: {'、'.join(args.add)}")
 
 
+def cmd_tsubuyaki(args) -> None:
+    from . import boxes
+    box = args.box or boxes.last_box()
+    if not box:
+        sys.exit("ボックスがありません。./nw box new 名前 で作ってください。")
+    text = " ".join(args.text) if args.text else sys.stdin.read()
+    k = boxes.post(text, box)
+    print(f"「{box}」に かけら {k['id']} を保存しました。")
+
+
+def cmd_box_list(args) -> None:
+    from . import boxes
+    last = boxes.last_box()
+    for b in boxes.list_boxes():
+        print(f"{'*' if b['name'] == last else ' '} {b['name']}  かけら {b['count']}")
+
+
+def cmd_box_new(args) -> None:
+    from . import boxes
+    print(f"ボックス「{boxes.create_box(args.name)['name']}」を作りました。")
+
+
+def cmd_box_move(args) -> None:
+    from . import boxes
+    moved = boxes.move(args.ids, args.to)
+    print(f"{len(moved)} 件を「{args.to}」へ移しました: {'、'.join(moved)}")
+
+
+def cmd_story_generate(args) -> None:
+    from . import story
+    p = story.prepare(args.box)
+    if args.show_prompt:
+        print(p["prompt"])
+    print(f"ボックス「{p['box']}」のかけら {len(p['kakera_ids'])} 個"
+          + (f"と本人が書いた文 {len(p['human'])} 個" if p["human"] else "") + f"で、記事を1本書かせます（{p['chars']}字）。")
+    if story.confirm_before_send() and not _ask_yes("この内容で Claude に渡しますか？ 渡すなら yes と入力: ",
+                                                     tty_only=not sys.stdin.isatty()):
+        print("渡しませんでした。")
+        sys.exit(1)
+    print("書いています（1〜数分）…", flush=True)
+    job = story.run(args.box, p["confirm_token"])
+    if job.get("status") == "conflict":
+        print(_safe(job["error"]), file=sys.stderr)
+        sys.exit(1)
+    if job.get("status") != "done":
+        _job_failed(_writing(), job)
+    print(f"v{job['version']} として保存しました。足した文 {job['bridge_count']}・足りない所 {job['gap_count']}。")
+    cmd_story_show(args)
+
+
+def cmd_story_show(args) -> None:
+    from . import story
+    blocks = story.current_blocks(args.box)
+    if not blocks:
+        print("まだ下書きがありません（./nw story generate ボックス）。")
+        return
+    for b in blocks:
+        if b["kind"] == "heading":
+            print("\n" + b["text"])
+            continue
+        if b.get("sentences"):
+            print("".join(("〔足〕" + s["text"]) if s.get("bridge") else s["text"] for s in b["sentences"]))
+        else:
+            print(b["text"])
+        print()
+    print("〔足〕= Claude が足した文（かけらに直接もとづかない）")
+    gaps = story.state(args.box)["gaps"]
+    if gaps:
+        print("\n足りないかけら（大事な順）:")
+        for g in gaps:
+            print(f"  {story.gap_label(int(g['no']))} {g['question']}" + ("（済み）" if g.get("answered") else ""))
+
+
+def cmd_story_answer(args) -> None:
+    from . import story
+    text = " ".join(args.text) if args.text else sys.stdin.read()
+    k = story.answer(args.box, args.no, text)
+    print(f"かけら {k['id']} として保存しました。./nw story generate {args.box} で書き直せます。")
+
+
 def _reactions():
     from . import reactions
     return reactions
@@ -1398,6 +1480,21 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("article"); a.add_argument("--materials", default="", help="使う資料ID（カンマ区切り。省略で記事の資料すべて）")
     a.add_argument("--show-prompt", action="store_true"); a.set_defaults(func=cmd_rdraft)
 
+    a = sub.add_parser("tsubuyaki", help="つぶやく（本文だけでかけらを保存。ボックスは前回のもの）")
+    a.add_argument("text", nargs="*"); a.add_argument("--box", default="", help="ボックス（省略で前回のもの）")
+    a.set_defaults(func=cmd_tsubuyaki)
+    bx = sub.add_parser("box", help="ボックス（何についての思い出かを分ける入れ物）").add_subparsers(dest="sub", required=True)
+    bx.add_parser("list", help="一覧（* は前回のボックス）").set_defaults(func=cmd_box_list)
+    a = bx.add_parser("new", help="作る"); a.add_argument("name"); a.set_defaults(func=cmd_box_new)
+    a = bx.add_parser("move", help="かけらを別のボックスへ移す（まとめて可）")
+    a.add_argument("ids", nargs="+"); a.add_argument("--to", required=True); a.set_defaults(func=cmd_box_move)
+    sy = sub.add_parser("story", help="ボックスのかけらから記事を1本書く").add_subparsers(dest="sub", required=True)
+    a = sy.add_parser("generate", help="下書きを作る・書き直す（ツールなし）"); a.add_argument("box")
+    a.add_argument("--show-prompt", action="store_true"); a.set_defaults(func=cmd_story_generate)
+    a = sy.add_parser("show", help="下書きと足りないかけらの質問"); a.add_argument("box"); a.set_defaults(func=cmd_story_show)
+    a = sy.add_parser("answer", help="質問に答える（かけらとして保存）")
+    a.add_argument("box"); a.add_argument("no", type=int); a.add_argument("text", nargs="*"); a.set_defaults(func=cmd_story_answer)
+
     a = sub.add_parser("interview", help="インタビュー（1問ずつ答えると、かけらとして保存）")
     a.add_argument("article"); a.set_defaults(func=cmd_interview)
 
@@ -1488,7 +1585,7 @@ def main(argv=None) -> None:
         print("\n中止しました。", file=sys.stderr)
         sys.exit(130)
     except Exception as ex:  # リサーチは外部とやり取りするので、トレースバックではなく伏せ字済みの理由だけ出す
-        if getattr(args, "cmd", "") not in ("research", "ideas", "draft", "style", "kabeuchi", "book", "sns", "rdraft"):
+        if getattr(args, "cmd", "") not in ("research", "ideas", "draft", "style", "kabeuchi", "book", "sns", "rdraft", "story"):
             raise
         print(_safe(f"エラー（{type(ex).__name__}）: {ex}"), file=sys.stderr)
         sys.exit(1)
