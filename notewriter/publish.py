@@ -132,6 +132,8 @@ def check_boundary(text: str) -> List[dict]:
     for i, line in enumerate(_lines(text), 1):
         if "[要追加" in line:
             out.append({"severity": "strong", "line": i, "message": "[要追加] が残っています。公開前に書き足すか、段落を消してください。"})
+        if "【足りない" in line:
+            out.append({"severity": "strong", "line": i, "message": "【足りない】の印が残っています。質問に答えて書き直すか、印を消してください。"})
     order = {"strong": 0, "warn": 1, "info": 2}
     return sorted(out, key=lambda f: (order[f["severity"]], f["line"]))
 

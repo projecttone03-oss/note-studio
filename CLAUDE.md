@@ -46,9 +46,13 @@ notestudioの段階3〜6（執筆・レビュー・公開準備・分析）は�
 - nw の変更は `./ns sync` ではなく、プルリクエストのマージで取り込む（sync は inbox/*.json しか受け取らない）。
 - かけら・下書きなどの実データは、作業フォルダ（既定 `workspace/`、本番は gocryptfs の復号ビュー）以外に置かない。commit もしない。
 
-### notewriter 開発の引き継ぎメモ（2026-10-01 更新・ブランチ nw-drafting）
+### notewriter 開発の引き継ぎメモ（2026-10-02 更新・ブランチ nw-tsubuyaki）
 
 **できているもの**: SPEC.md の機能1〜14をひととおり（第1〜第4段階）。
+- 2026-10-02 の変更依頼で、体験談の入口と下書きを作り直した: つぶやき・ボックス・かけらの移動（`boxes.py`）、
+  ボックスのかけらから記事を1本書く下書き（`story.py`・`web_story.py`・`config/writing_prompts/story.md`）。
+  ボックス = 今までの「記事」（articles.json）。1文ずつの根拠は版のブロックの `sentences`（`bridge` = Claude が足した文）。
+  手直しは `writing._align_sentences` で文の単位に突き合わせ、文体学習の組を記録する。以前の区間ごとの下書き（/drafts）は残してある。
 - 画面は機能ごとに `notewriter/web_*.py` に分け、`web.py` の `EXTENSIONS` から振り分けるだけ（各モジュールは
   `PREFIXES`・`route_get`・`post`・`back`）。公開準備の画面に足すカードは `web_publish.CARD_MODULES`。
 - ツールなしの Claude を裏で1回呼ぶ処理は `notewriter/jobs.py`（確認トークン・同時実行の排他・init 検証）を使う。
@@ -57,7 +61,7 @@ notestudioの段階3〜6（執筆・レビュー・公開準備・分析）は�
 - VPS 用の手順書とスクリプトは `notewriter/ops/`（**未検証**。bash -n のみ）。
 
 **まだ確かめていないこと（Mac・VPS で人が確認する）**:
-- 本物の Claude での確認: 壁打ちの起動（`claude --remote-control` のフラグ名・`--append-system-prompt-file`）、
+- 本物の Claude での確認: ボックスからの下書き（足した文の量・質問の答えやすさ）、壁打ちの起動（`claude --remote-control` のフラグ名・`--append-system-prompt-file`）、
   文体候補・書籍分析・リサーチ型の下書き・SNS 投稿文の出力の質。クラウドの claude はログインしていない。
 - X・Threads の Web Intent の実機確認（済んだら `config/sns.json` の `intents_verified` を true に）。
 - note の CSV の列名（`config/reactions_csv.json`）。Mac での `tools/pdftool` による書籍の取り込み。

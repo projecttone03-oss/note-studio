@@ -358,7 +358,7 @@ class LayoutTest(unittest.TestCase):
             self.assertIn(g, html)
         self.assertIn('class="tabbar"', html)
         self.assertIn('href="/menu"', html)
-        self.assertIn('<a href="/drafts" class="on">', html)
+        self.assertIn('<a href="/story" class="on">', html, "以前の下書き画面は新しい「下書き」を光らせる")
         keys = [k for k, _, _ in web.NAV]
         self.assertEqual(len(keys), len(set(keys)), "メニューに同じ画面が2回出ない")
         menu = web.page_menu()
